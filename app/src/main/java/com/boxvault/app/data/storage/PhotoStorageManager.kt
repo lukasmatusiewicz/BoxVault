@@ -32,6 +32,8 @@ class PhotoStorageManager(
     /**
      * Resolves a relative path inside the `photos` directory and strictly verifies
      * that the resulting canonical path stays inside [photosDirectory].
+     * Maintains full backward compatibility for resolving existing `.jpg` files if requested
+     * with `.webp` and vice versa.
      *
      * @throws SecurityException if [relativePath] is blank or attempts path traversal.
      */
@@ -55,17 +57,38 @@ class PhotoStorageManager(
         if (!targetCanonical.path.startsWith(rootPrefix)) {
             throw SecurityException("Resolved path escapes photos directory: $relativePath")
         }
+
+        // Backward compatibility: If the file does not exist at targetCanonical,
+        // check whether an existing legacy file exists with swapped extension (.jpg <-> .webp)
+        if (!targetCanonical.exists()) {
+            if (sanitizedInput.endsWith(".webp", ignoreCase = true)) {
+                val legacyJpg = File(rootCanonical, sanitizedInput.substringBeforeLast('.') + ".jpg").canonicalFile
+                if (legacyJpg.exists() && legacyJpg.path.startsWith(rootPrefix)) {
+                    return legacyJpg
+                }
+                val legacyJpeg = File(rootCanonical, sanitizedInput.substringBeforeLast('.') + ".jpeg").canonicalFile
+                if (legacyJpeg.exists() && legacyJpeg.path.startsWith(rootPrefix)) {
+                    return legacyJpeg
+                }
+            } else if (sanitizedInput.endsWith(".jpg", ignoreCase = true) || sanitizedInput.endsWith(".jpeg", ignoreCase = true)) {
+                val modernWebp = File(rootCanonical, sanitizedInput.substringBeforeLast('.') + ".webp").canonicalFile
+                if (modernWebp.exists() && modernWebp.path.startsWith(rootPrefix)) {
+                    return modernWebp
+                }
+            }
+        }
+
         return targetCanonical
     }
 
     suspend fun savePhotoBytes(
         bytes: ByteArray,
         prefix: String = "photo",
-        extension: String = "jpg",
+        extension: String = DEFAULT_PHOTO_EXTENSION,
         compressIfBitmap: Boolean = true
     ): String = withContext(ioDispatcher) {
         val safePrefix = prefix.replace(Regex("[^a-zA-Z0-9_-]"), "").ifEmpty { "photo" }
-        val safeExtension = extension.replace(Regex("[^a-zA-Z0-9]"), "").ifEmpty { "jpg" }
+        val safeExtension = extension.replace(Regex("[^a-zA-Z0-9]"), "").ifEmpty { DEFAULT_PHOTO_EXTENSION }
         val fileName = "${safePrefix}_${UUID.randomUUID()}.$safeExtension"
         val destFile = resolvePhotoFile(fileName)
         destFile.parentFile?.mkdirs()
@@ -81,10 +104,10 @@ class PhotoStorageManager(
     suspend fun savePhotoStream(
         inputStream: InputStream,
         prefix: String = "photo",
-        extension: String = "jpg"
+        extension: String = DEFAULT_PHOTO_EXTENSION
     ): String = withContext(ioDispatcher) {
         val safePrefix = prefix.replace(Regex("[^a-zA-Z0-9_-]"), "").ifEmpty { "photo" }
-        val safeExtension = extension.replace(Regex("[^a-zA-Z0-9]"), "").ifEmpty { "jpg" }
+        val safeExtension = extension.replace(Regex("[^a-zA-Z0-9]"), "").ifEmpty { DEFAULT_PHOTO_EXTENSION }
         val fileName = "${safePrefix}_${UUID.randomUUID()}.$safeExtension"
         val destFile = resolvePhotoFile(fileName)
         destFile.parentFile?.mkdirs()
@@ -160,5 +183,6 @@ class PhotoStorageManager(
 
     companion object {
         const val PHOTOS_DIR_NAME = "photos"
+        const val DEFAULT_PHOTO_EXTENSION = "webp"
     }
 }
