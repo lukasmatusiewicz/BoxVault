@@ -67,4 +67,10 @@ interface ItemDao {
 
     @Query("SELECT COUNT(*) FROM items")
     fun observeDistinctItemCount(): Flow<Int>
+
+    @Query("SELECT * FROM items ORDER BY createdAt ASC")
+    suspend fun getAllItems(): List<ItemEntity>
+
+    @Query("DELETE FROM items")
+    suspend fun deleteAllItems()
 }

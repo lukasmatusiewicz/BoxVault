@@ -40,5 +40,7 @@ interface PhotoDao {
 
     @Query("SELECT * FROM photos ORDER BY createdAt DESC")
     suspend fun getAllPhotos(): List<PhotoEntity>
-}
 
+    @Query("DELETE FROM photos")
+    suspend fun deleteAllPhotos()
+}
