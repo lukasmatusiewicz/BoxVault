@@ -33,9 +33,10 @@ proguard/
 # Log Files
 *.log
 
-# Android Studio / IntelliJ Navigation & IDE files
+# Android Studio / IntelliJ / VS Code IDE files
 *.iml
 .idea/
+.vscode/
 .navigation/
 captures/
 .externalNativeBuild/
@@ -46,4 +47,3 @@ captures/
 # OS-specific files
 .DS_Store
 Thumbs.db
-
