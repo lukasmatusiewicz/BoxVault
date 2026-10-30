@@ -246,4 +246,33 @@ class BoxVaultRepository(
         val boxId = BoxEntity.parseBoxIdFromQrPayload(qrPayload) ?: return null
         return boxDao.getBoxWithItemsAndPhotos(boxId)
     }
+
+    suspend fun getAllBoxes(): List<BoxEntity> =
+        boxDao.getAllBoxes()
+
+    suspend fun getAllItems(): List<ItemEntity> =
+        itemDao.getAllItems()
+
+    suspend fun getAllPhotos(): List<PhotoEntity> =
+        photoDao.getAllPhotos()
+
+    suspend fun replaceAllInventoryData(
+        boxes: List<BoxEntity>,
+        items: List<ItemEntity>,
+        photos: List<PhotoEntity>
+    ) {
+        photoDao.deleteAllPhotos()
+        itemDao.deleteAllItems()
+        boxDao.deleteAllBoxes()
+
+        if (boxes.isNotEmpty()) {
+            boxDao.upsertBoxes(boxes)
+        }
+        if (items.isNotEmpty()) {
+            itemDao.upsertItems(items)
+        }
+        if (photos.isNotEmpty()) {
+            photoDao.insertPhotos(photos)
+        }
+    }
 }

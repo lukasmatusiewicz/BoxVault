@@ -1,26 +1,9 @@
 package com.boxvault.app.ui.navigation
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -28,8 +11,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.boxvault.app.data.backup.BackupManager
 import com.boxvault.app.data.repository.BoxVaultRepository
 import com.boxvault.app.data.storage.PhotoStorageManager
+import com.boxvault.app.ui.screens.backup.BackupRestoreScreen
+import com.boxvault.app.ui.screens.backup.BackupRestoreViewModel
 import com.boxvault.app.ui.screens.boxdetail.BoxDetailScreen
 import com.boxvault.app.ui.screens.boxdetail.BoxDetailViewModel
 import com.boxvault.app.ui.screens.boxedit.BoxEditScreen
@@ -38,17 +24,31 @@ import com.boxvault.app.ui.screens.bulkentry.BulkEntryScreen
 import com.boxvault.app.ui.screens.bulkentry.BulkEntryViewModel
 import com.boxvault.app.ui.screens.dashboard.DashboardScreen
 import com.boxvault.app.ui.screens.dashboard.DashboardViewModel
+import com.boxvault.app.ui.screens.pdfgenerator.PdfGeneratorScreen
+import com.boxvault.app.ui.screens.pdfgenerator.PdfGeneratorViewModel
+import com.boxvault.app.ui.screens.scanner.QrScannerScreen
+import com.boxvault.app.ui.screens.scanner.QrScannerViewModel
 
 @Composable
 fun BoxVaultNavHost(
     repository: BoxVaultRepository,
     photoStorageManager: PhotoStorageManager,
     modifier: Modifier = Modifier,
+    backupManager: BackupManager? = null,
     navController: NavHostController = rememberNavController(),
     qrScannerContent: (@Composable (onNavigateBack: () -> Unit, onBoxScanned: (String) -> Unit) -> Unit)? = null,
     pdfGeneratorContent: (@Composable (initialBoxId: String?, onNavigateBack: () -> Unit) -> Unit)? = null,
     backupRestoreContent: (@Composable (onNavigateBack: () -> Unit) -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val resolvedBackupManager = remember(backupManager, repository, photoStorageManager) {
+        backupManager ?: BackupManager(
+            context = context,
+            repository = repository,
+            photoStorageManager = photoStorageManager
+        )
+    }
+
     NavHost(
         navController = navController,
         startDestination = BoxVaultDestinations.DASHBOARD_ROUTE,
@@ -88,12 +88,22 @@ fun BoxVaultNavHost(
                     type = NavType.StringType
                     nullable = true
                     defaultValue = null
+                },
+                navArgument(BoxVaultDestinations.ARG_PRESET_BOX_ID) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
                 }
             )
         ) { backStackEntry ->
             val boxId = backStackEntry.arguments?.getString(BoxVaultDestinations.ARG_BOX_ID)
+            val presetBoxId = backStackEntry.arguments?.getString(BoxVaultDestinations.ARG_PRESET_BOX_ID)
             val editViewModel: BoxEditViewModel = viewModel(
-                factory = BoxEditViewModel.Factory(repository, boxId)
+                factory = BoxEditViewModel.Factory(
+                    repository = repository,
+                    boxId = boxId,
+                    presetBoxId = presetBoxId
+                )
             )
             BoxEditScreen(
                 viewModel = editViewModel,
@@ -126,7 +136,7 @@ fun BoxVaultNavHost(
                 photoStorageManager = photoStorageManager,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToEditBox = { targetBoxId ->
-                    navController.navigate(BoxVaultDestinations.boxEditRoute(targetBoxId))
+                    navController.navigate(BoxVaultDestinations.boxEditRoute(boxId = targetBoxId))
                 },
                 onNavigateToBulkEntry = { targetBoxId ->
                     navController.navigate(BoxVaultDestinations.bulkEntryRoute(targetBoxId))
@@ -155,7 +165,7 @@ fun BoxVaultNavHost(
             )
         }
 
-        // Milestone 4 & 5 Route Hooks
+        // Milestone 4: Offline CameraX + Bundled ML Kit QR Scanner
         composable(route = BoxVaultDestinations.QR_SCANNER_ROUTE) {
             if (qrScannerContent != null) {
                 qrScannerContent(
@@ -168,14 +178,31 @@ fun BoxVaultNavHost(
                     }
                 )
             } else {
-                MilestoneRouteHookPlaceholder(
-                    title = "QR Code Scanner",
-                    subtitle = "CameraX + Offline ML Kit Barcode Scanner Hook Ready",
-                    onNavigateBack = { navController.popBackStack() }
+                val scannerViewModel: QrScannerViewModel = viewModel(
+                    factory = QrScannerViewModel.Factory(repository)
+                )
+                QrScannerScreen(
+                    viewModel = scannerViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onExistingBoxScanned = { existingBoxId ->
+                        navController.navigate(BoxVaultDestinations.boxDetailRoute(existingBoxId)) {
+                            popUpTo(BoxVaultDestinations.DASHBOARD_ROUTE) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    },
+                    onUnassignedQrScanned = { presetBoxId ->
+                        navController.navigate(
+                            BoxVaultDestinations.boxEditRoute(presetBoxId = presetBoxId)
+                        ) {
+                            popUpTo(BoxVaultDestinations.DASHBOARD_ROUTE) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
         }
 
+        // Milestone 4: Native PdfDocument Printable QR Label Sheet Generator
         composable(
             route = BoxVaultDestinations.PDF_GENERATOR_ROUTE,
             arguments = listOf(
@@ -190,72 +217,34 @@ fun BoxVaultNavHost(
             if (pdfGeneratorContent != null) {
                 pdfGeneratorContent(boxId) { navController.popBackStack() }
             } else {
-                MilestoneRouteHookPlaceholder(
-                    title = "Printable A4 QR Grid Sheet",
-                    subtitle = "ZXing + Android PdfDocument Generator Hook Ready",
+                val pdfViewModel: PdfGeneratorViewModel = viewModel(
+                    factory = PdfGeneratorViewModel.Factory(
+                        repository = repository,
+                        initialBoxId = boxId
+                    )
+                )
+                PdfGeneratorScreen(
+                    viewModel = pdfViewModel,
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
         }
 
+        // Milestone 5: SAF Local .ZIP Backup & Atomic Staged Restore
         composable(route = BoxVaultDestinations.BACKUP_RESTORE_ROUTE) {
             if (backupRestoreContent != null) {
                 backupRestoreContent { navController.popBackStack() }
             } else {
-                MilestoneRouteHookPlaceholder(
-                    title = "Local ZIP Backup & Restore",
-                    subtitle = "100% Offline SAF Archive Export/Import Hook Ready",
+                val backupViewModel: BackupRestoreViewModel = viewModel(
+                    factory = BackupRestoreViewModel.Factory(
+                        repository = repository,
+                        backupManager = resolvedBackupManager
+                    )
+                )
+                BackupRestoreScreen(
+                    viewModel = backupViewModel,
                     onNavigateBack = { navController.popBackStack() }
                 )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun MilestoneRouteHookPlaceholder(
-    title: String,
-    subtitle: String,
-    onNavigateBack: () -> Unit
-) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(title, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = onNavigateBack) {
-                Text("Back to Dashboard")
             }
         }
     }

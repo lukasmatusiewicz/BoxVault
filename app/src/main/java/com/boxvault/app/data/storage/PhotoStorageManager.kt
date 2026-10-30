@@ -1,6 +1,7 @@
 package com.boxvault.app.data.storage
 
 import android.content.Context
+import com.boxvault.app.util.image.PhotoCompressor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -60,14 +61,20 @@ class PhotoStorageManager(
     suspend fun savePhotoBytes(
         bytes: ByteArray,
         prefix: String = "photo",
-        extension: String = "jpg"
+        extension: String = "jpg",
+        compressIfBitmap: Boolean = true
     ): String = withContext(ioDispatcher) {
         val safePrefix = prefix.replace(Regex("[^a-zA-Z0-9_-]"), "").ifEmpty { "photo" }
         val safeExtension = extension.replace(Regex("[^a-zA-Z0-9]"), "").ifEmpty { "jpg" }
         val fileName = "${safePrefix}_${UUID.randomUUID()}.$safeExtension"
         val destFile = resolvePhotoFile(fileName)
         destFile.parentFile?.mkdirs()
-        destFile.writeBytes(bytes)
+        val finalBytes = if (compressIfBitmap) {
+            PhotoCompressor.compressAndNormalize(bytes)
+        } else {
+            bytes
+        }
+        destFile.writeBytes(finalBytes)
         fileName
     }
 
@@ -85,6 +92,27 @@ class PhotoStorageManager(
             inputStream.copyTo(output)
         }
         fileName
+    }
+
+    suspend fun writePhotoBytesAtRelativePath(
+        relativePath: String,
+        bytes: ByteArray
+    ): File = withContext(ioDispatcher) {
+        val destFile = resolvePhotoFile(relativePath)
+        destFile.parentFile?.mkdirs()
+        destFile.writeBytes(bytes)
+        destFile
+    }
+
+    suspend fun clearAllPhotoFiles(): Int = withContext(ioDispatcher) {
+        if (!photosDirectory.exists()) return@withContext 0
+        var deletedCount = 0
+        photosDirectory.listFiles()?.forEach { file ->
+            if (file.isFile && file.delete()) {
+                deletedCount++
+            }
+        }
+        deletedCount
     }
 
     suspend fun readPhotoBytes(relativePath: String): ByteArray = withContext(ioDispatcher) {
@@ -134,4 +162,3 @@ class PhotoStorageManager(
         const val PHOTOS_DIR_NAME = "photos"
     }
 }
-

@@ -1,5 +1,6 @@
 package com.boxvault.app.ui.screens.boxedit
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,7 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -43,14 +44,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.ui.theme.DefaultBoxColorOptions
+import com.boxvault.app.util.qr.QrCodeGenerator
 
 private val PresetBoxCategories = listOf(
     "General",
@@ -71,13 +76,25 @@ fun BoxEditScreen(
     onBoxSaved: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val qrBitmap = remember(uiState.boxId) {
+        runCatching {
+            QrCodeGenerator.generateBoxQrBitmap(
+                boxId = uiState.boxId,
+                sizePx = 192
+            )
+        }.getOrNull()
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = if (uiState.isEditMode) "Edit Storage Box" else "New Storage Box",
+                        text = when {
+                            uiState.isEditMode -> "Edit Storage Box"
+                            uiState.isPreAllocatedQrLabel -> "Assign Pre-Printed QR Label"
+                            else -> "New Storage Box"
+                        },
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -114,6 +131,39 @@ fun BoxEditScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (uiState.isPreAllocatedQrLabel) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QrCodeScanner,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Column {
+                            Text(
+                                text = "Unassigned Pre-Printed QR Sticker Detected",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "Saving this box binds it permanently to the scanned QR code (${uiState.boxId.take(8)}…).",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+
             if (uiState.errorMessage != null) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
@@ -130,7 +180,7 @@ fun BoxEditScreen(
                 }
             }
 
-            // Immutable QR URI Preview Card
+            // Immutable QR URI + Live ZXing QR Preview Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -145,12 +195,17 @@ fun BoxEditScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.QrCode2,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(32.dp)
-                    )
+                    if (qrBitmap != null) {
+                        Image(
+                            bitmap = qrBitmap.asImageBitmap(),
+                            contentDescription = "QR Code Preview",
+                            filterQuality = FilterQuality.None,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White)
+                        )
+                    }
                     Column {
                         Text(
                             text = "Immutable QR Payload (Safe to Rename/Move Box)",

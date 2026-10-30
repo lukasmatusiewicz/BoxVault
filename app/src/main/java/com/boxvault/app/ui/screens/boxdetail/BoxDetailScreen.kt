@@ -3,7 +3,9 @@ package com.boxvault.app.ui.screens.boxdetail
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +64,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -74,7 +79,8 @@ import com.boxvault.app.data.local.model.ItemWithPhotos
 import com.boxvault.app.data.storage.PhotoStorageManager
 import com.boxvault.app.ui.components.LocalPhotoThumbnail
 import com.boxvault.app.ui.theme.parseBoxColor
-import java.io.ByteArrayOutputStream
+import com.boxvault.app.util.image.PhotoCompressor
+import com.boxvault.app.util.qr.QrCodeGenerator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,16 +98,15 @@ fun BoxDetailScreen(
     var showAddOrEditItemDialog by remember { mutableStateOf(false) }
     var itemBeingEdited by remember { mutableStateOf<ItemEntity?>(null) }
     var showDeleteBoxConfirm by remember { mutableStateOf(false) }
+    var showQrPreviewDialog by remember { mutableStateOf(false) }
     var pendingPhotoTargetItemId by remember { mutableStateOf<String?>(null) }
 
-    // Camera capture launcher (100% local in-memory bitmap -> JPEG bytes)
+    // Camera capture launcher (100% local in-memory bitmap -> downsampled 80% JPEG bytes)
     val takePicturePreviewLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
         if (bitmap != null) {
-            val stream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 88, stream)
-            val bytes = stream.toByteArray()
+            val bytes = PhotoCompressor.compressBitmapToJpeg(bitmap)
             val targetItemId = pendingPhotoTargetItemId
             if (targetItemId != null) {
                 viewModel.attachPhotoToItem(targetItemId, bytes)
@@ -112,20 +117,21 @@ fun BoxDetailScreen(
         pendingPhotoTargetItemId = null
     }
 
-    // Local Gallery file picker launcher (100% local URI stream)
+    // Local Gallery file picker launcher (100% local URI stream -> Exif normalized & downsampled)
     val pickImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            val bytes = runCatching {
+            val rawBytes = runCatching {
                 context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             }.getOrNull()
-            if (bytes != null && bytes.isNotEmpty()) {
+            if (rawBytes != null && rawBytes.isNotEmpty()) {
+                val compressedBytes = PhotoCompressor.compressAndNormalize(rawBytes)
                 val targetItemId = pendingPhotoTargetItemId
                 if (targetItemId != null) {
-                    viewModel.attachPhotoToItem(targetItemId, bytes)
+                    viewModel.attachPhotoToItem(targetItemId, compressedBytes)
                 } else {
-                    viewModel.attachPhotoToBox(bytes)
+                    viewModel.attachPhotoToBox(compressedBytes)
                 }
             }
         }
@@ -161,6 +167,12 @@ fun BoxDetailScreen(
                 },
                 actions = {
                     if (box != null) {
+                        IconButton(onClick = { showQrPreviewDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.QrCode2,
+                                contentDescription = "View QR Code"
+                            )
+                        }
                         IconButton(onClick = { onNavigateToPrintQr(box.id) }) {
                             Icon(
                                 imageVector = Icons.Default.Print,
@@ -214,7 +226,8 @@ fun BoxDetailScreen(
                         box = box,
                         distinctItemCount = uiState.distinctItemCount,
                         totalQuantity = uiState.totalQuantity,
-                        photoCount = uiState.boxWithDetails?.photos?.size ?: 0
+                        photoCount = uiState.boxWithDetails?.photos?.size ?: 0,
+                        onShowQrModal = { showQrPreviewDialog = true }
                     )
                 }
 
@@ -372,6 +385,17 @@ fun BoxDetailScreen(
         )
     }
 
+    if (showQrPreviewDialog && box != null) {
+        QrCodePreviewDialog(
+            box = box,
+            onDismiss = { showQrPreviewDialog = false },
+            onPrintPdfSheet = {
+                showQrPreviewDialog = false
+                onNavigateToPrintQr(box.id)
+            }
+        )
+    }
+
     if (showDeleteBoxConfirm && box != null) {
         AlertDialog(
             onDismissRequest = { showDeleteBoxConfirm = false },
@@ -408,9 +432,18 @@ private fun BoxHeaderCard(
     box: BoxEntity,
     distinctItemCount: Int,
     totalQuantity: Int,
-    photoCount: Int
+    photoCount: Int,
+    onShowQrModal: () -> Unit
 ) {
     val accentColor = parseBoxColor(box.colorHex)
+    val qrBitmap = remember(box.id) {
+        runCatching {
+            QrCodeGenerator.generateBoxQrBitmap(
+                boxId = box.id,
+                sizePx = 192
+            )
+        }.getOrNull()
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -502,34 +535,130 @@ private fun BoxHeaderCard(
                 )
             }
 
-            // Immutable QR URI badge
+            // Interactive QR Thumbnail + Immutable QR URI badge
             Surface(
                 color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onShowQrModal)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.QrCode2,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = box.qrPayload,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (qrBitmap != null) {
+                        Image(
+                            bitmap = qrBitmap.asImageBitmap(),
+                            contentDescription = "Tap to enlarge QR code",
+                            filterQuality = FilterQuality.None,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color.White)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.QrCode2,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Tap to Enlarge / Print QR Label",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = box.qrPayload,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun QrCodePreviewDialog(
+    box: BoxEntity,
+    onDismiss: () -> Unit,
+    onPrintPdfSheet: () -> Unit
+) {
+    val qrBitmap = remember(box.id) {
+        runCatching {
+            QrCodeGenerator.generateBoxQrBitmap(
+                boxId = box.id,
+                sizePx = 512,
+                marginModules = 2
+            )
+        }.getOrNull()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text(
+                    text = "${box.shortCode} • ${box.name}",
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = box.qrPayload,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (qrBitmap != null) {
+                    Image(
+                        bitmap = qrBitmap.asImageBitmap(),
+                        contentDescription = "High-contrast QR code for ${box.shortCode}",
+                        filterQuality = FilterQuality.None,
+                        modifier = Modifier
+                            .size(240.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White)
+                            .padding(8.dp)
+                    )
+                }
+                Text(
+                    text = "This QR code encodes the immutable box UUID. You can rename or move ${box.shortCode} at any time without ever re-printing this sticker.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = onPrintPdfSheet) {
+                Icon(
+                    imageVector = Icons.Default.Print,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Print on PDF Sheet")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }
 
 @Composable

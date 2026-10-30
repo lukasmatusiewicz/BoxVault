@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.kover)
 }
 
 android {
@@ -61,6 +62,26 @@ ksp {
     arg("room.generateKotlin", "true")
 }
 
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "*.BuildConfig",
+                    "*_Impl*",
+                    "*ComposableSingletons*",
+                    "com.boxvault.app.MainActivity*",
+                    "com.boxvault.app.BoxVaultApplication*",
+                    "com.boxvault.app.ui.theme.*",
+                    "com.boxvault.app.ui.components.*",
+                    "com.boxvault.app.ui.navigation.BoxVaultNavHostKt*",
+                    "com.boxvault.app.ui.screens.*.*ScreenKt*"
+                )
+            }
+        }
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -106,4 +127,3 @@ dependencies {
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.kotlinx.coroutines.test)
 }
-

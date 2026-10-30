@@ -91,4 +91,10 @@ interface BoxDao {
 
     @Query("SELECT COUNT(*) FROM boxes")
     suspend fun getTotalBoxCount(): Int
+
+    @Query("SELECT * FROM boxes ORDER BY createdAt ASC")
+    suspend fun getAllBoxes(): List<BoxEntity>
+
+    @Query("DELETE FROM boxes")
+    suspend fun deleteAllBoxes()
 }

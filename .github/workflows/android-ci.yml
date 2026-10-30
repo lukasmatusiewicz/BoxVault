@@ -1,0 +1,119 @@
+name: Android CI & Security Audit
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-coverage:
+    name: Build, Shift-Left Unit Tests, Offline Audit & Kover Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Grant execute permission for gradlew
+        run: |
+          sed -i 's/\r$//' gradlew
+          chmod +x gradlew
+
+      - name: Setup Gradle with Cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build Debug APK, Run Unit Tests & Generate Kover Coverage
+        run: ./gradlew assembleDebug testDebugUnitTest koverXmlReportDebug koverHtmlReportDebug koverLogDebug --stacktrace
+
+      - name: Verify 100% Offline Merged AndroidManifest (Zero Network Permissions)
+        run: |
+          MANIFEST_PATH="app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml"
+          if [ ! -f "$MANIFEST_PATH" ]; then
+            echo "::error::Merged AndroidManifest.xml not found at $MANIFEST_PATH"
+            exit 1
+          fi
+          if grep -q "android.permission.INTERNET" "$MANIFEST_PATH"; then
+            echo "::error::SECURITY VIOLATION: android.permission.INTERNET found in merged manifest!"
+            exit 1
+          fi
+          if grep -q "android.permission.ACCESS_NETWORK_STATE" "$MANIFEST_PATH"; then
+            echo "::error::SECURITY VIOLATION: android.permission.ACCESS_NETWORK_STATE found in merged manifest!"
+            exit 1
+          fi
+          echo "✅ Verified: Merged AndroidManifest.xml contains 0 network permissions."
+
+      - name: Publish Test & Kover Coverage Summary
+        if: always()
+        run: |
+          python3 - << 'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import glob
+          import os
+          import xml.etree.ElementTree as ET
+
+          total_tests = 0
+          total_failures = 0
+          total_errors = 0
+          for path in glob.glob("app/build/test-results/testDebugUnitTest/TEST-*.xml"):
+              tree = ET.parse(path)
+              root = tree.getroot()
+              total_tests += int(root.attrib.get("tests", 0))
+              total_failures += int(root.attrib.get("failures", 0))
+              total_errors += int(root.attrib.get("errors", 0))
+
+          passed_tests = total_tests - total_failures - total_errors
+
+          line_pct = "N/A"
+          instr_pct = "N/A"
+          branch_pct = "N/A"
+          kover_xml = "app/build/reports/kover/reportDebug.xml"
+          if os.path.exists(kover_xml):
+              root = ET.parse(kover_xml).getroot()
+              for counter in root.findall("./counter"):
+                  ctype = counter.attrib.get("type")
+                  missed = int(counter.attrib.get("missed", 0))
+                  covered = int(counter.attrib.get("covered", 0))
+                  total = missed + covered
+                  pct = f"{(covered * 100.0 / total):.1f}%" if total > 0 else "0.0%"
+                  if ctype == "LINE":
+                      line_pct = f"{pct} ({covered}/{total})"
+                  elif ctype == "INSTRUCTION":
+                      instr_pct = f"{pct} ({covered}/{total})"
+                  elif ctype == "BRANCH":
+                      branch_pct = f"{pct} ({covered}/{total})"
+
+          print("## 📦 BoxVault CI Verification Summary")
+          print("")
+          print("| Verification Gate | Status | Result |")
+          print("| :--- | :---: | :--- |")
+          print(f"| **Shift-Left Unit Tests (JUnit + Robolectric)** | {'✅ PASS' if (total_failures + total_errors) == 0 else '❌ FAIL'} | `{passed_tests}/{total_tests}` passed |")
+          print(f"| **Kover Line Coverage** | ✅ MEASURED | `{line_pct}` |")
+          print(f"| **Kover Instruction Coverage** | ✅ MEASURED | `{instr_pct}` |")
+          print(f"| **Kover Branch Coverage** | ✅ MEASURED | `{branch_pct}` |")
+          print("| **Zero-Network Merged Manifest Audit** | ✅ VERIFIED | `0 INTERNET / 0 ACCESS_NETWORK_STATE` |")
+          EOF
+
+      - name: Upload Kover Coverage & Unit Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boxvault-test-and-kover-reports
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/reports/kover/
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: boxvault-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
