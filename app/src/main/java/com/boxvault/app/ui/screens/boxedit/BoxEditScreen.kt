@@ -1,0 +1,323 @@
+package com.boxvault.app.ui.screens.boxedit
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.boxvault.app.ui.theme.DefaultBoxColorOptions
+
+private val PresetBoxCategories = listOf(
+    "General",
+    "Tools & Hardware",
+    "Winter Gear",
+    "Holiday Decor",
+    "Electronics",
+    "Kitchen & Dining",
+    "Documents",
+    "Camping & Sports"
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BoxEditScreen(
+    viewModel: BoxEditViewModel,
+    onNavigateBack: () -> Unit,
+    onBoxSaved: (String) -> Unit
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = if (uiState.isEditMode) "Edit Storage Box" else "New Storage Box",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                },
+                actions = {
+                    Button(
+                        onClick = { viewModel.saveBox(onBoxSaved) },
+                        modifier = Modifier.padding(end = 12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Save,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Save Box")
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            if (uiState.errorMessage != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = uiState.errorMessage ?: "",
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+
+            // Immutable QR URI Preview Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.QrCode2,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "Immutable QR Payload (Safe to Rename/Move Box)",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = uiState.qrPayloadPreview,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Short Code + Auto-Generate Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = uiState.shortCode,
+                    onValueChange = viewModel::onShortCodeChange,
+                    label = { Text("Box Short Code *") },
+                    placeholder = { Text("BOX-001") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                AssistChip(
+                    onClick = viewModel::regenerateShortCode,
+                    label = { Text("Auto Code") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = "Auto-generate next code",
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                )
+            }
+
+            // Box Name
+            OutlinedTextField(
+                value = uiState.name,
+                onValueChange = viewModel::onNameChange,
+                label = { Text("Box Name *") },
+                placeholder = { Text("e.g., Power Tools & Drill Bits") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Storage Location + Quick Location Chips
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedTextField(
+                    value = uiState.location,
+                    onValueChange = viewModel::onLocationChange,
+                    label = { Text("Storage Location / Shelf") },
+                    placeholder = { Text("e.g., Garage Rack B, Shelf 2") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (uiState.existingLocations.isNotEmpty()) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 2.dp)
+                    ) {
+                        items(uiState.existingLocations) { loc ->
+                            FilterChip(
+                                selected = uiState.location.equals(loc, ignoreCase = true),
+                                onClick = { viewModel.onLocationChange(loc) },
+                                label = { Text(loc) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Category + Quick Category Chips
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedTextField(
+                    value = uiState.category,
+                    onValueChange = viewModel::onCategoryChange,
+                    label = { Text("Category") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 2.dp)
+                ) {
+                    items(PresetBoxCategories) { cat ->
+                        FilterChip(
+                            selected = uiState.category.equals(cat, ignoreCase = true),
+                            onClick = { viewModel.onCategoryChange(cat) },
+                            label = { Text(cat) }
+                        )
+                    }
+                }
+            }
+
+            // Color Picker
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Color Tag",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(DefaultBoxColorOptions) { option ->
+                        val isSelected = uiState.colorHex.equals(option.hex, ignoreCase = true)
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(option.color)
+                                .border(
+                                    width = if (isSelected) 3.dp else 1.dp,
+                                    color = if (isSelected) {
+                                        MaterialTheme.colorScheme.onBackground
+                                    } else {
+                                        Color.Transparent
+                                    },
+                                    shape = CircleShape
+                                )
+                                .clickable { viewModel.onColorHexChange(option.hex) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = option.label,
+                                    tint = Color.Black
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Notes
+            OutlinedTextField(
+                value = uiState.notes,
+                onValueChange = viewModel::onNotesChange,
+                label = { Text("Notes (Optional)") },
+                placeholder = { Text("Heavy bin, fragile contents, seasonal notes...") },
+                minLines = 3,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = { viewModel.saveBox(onBoxSaved) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(imageVector = Icons.Default.Save, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (uiState.isEditMode) "Save Changes" else "Create Box",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+        }
+    }
+}
