@@ -1,5 +1,7 @@
 package com.boxvault.app.data.repository
 
+import androidx.room.withTransaction
+import com.boxvault.app.data.local.BoxVaultDatabase
 import com.boxvault.app.data.local.dao.BoxDao
 import com.boxvault.app.data.local.dao.ItemDao
 import com.boxvault.app.data.local.dao.PhotoDao
@@ -21,7 +23,8 @@ class BoxVaultRepository(
     private val boxDao: BoxDao,
     private val itemDao: ItemDao,
     private val photoDao: PhotoDao,
-    private val photoStorageManager: PhotoStorageManager
+    private val photoStorageManager: PhotoStorageManager,
+    private val boxVaultDatabase: BoxVaultDatabase? = null
 ) {
 
     fun observeAllBoxesWithDetails(): Flow<List<BoxWithItemsAndPhotos>> =
@@ -261,18 +264,28 @@ class BoxVaultRepository(
         items: List<ItemEntity>,
         photos: List<PhotoEntity>
     ) {
-        photoDao.deleteAllPhotos()
-        itemDao.deleteAllItems()
-        boxDao.deleteAllBoxes()
+        val executeRestore: suspend () -> Unit = {
+            photoDao.deleteAllPhotos()
+            itemDao.deleteAllItems()
+            boxDao.deleteAllBoxes()
 
-        if (boxes.isNotEmpty()) {
-            boxDao.upsertBoxes(boxes)
+            if (boxes.isNotEmpty()) {
+                boxDao.upsertBoxes(boxes)
+            }
+            if (items.isNotEmpty()) {
+                itemDao.upsertItems(items)
+            }
+            if (photos.isNotEmpty()) {
+                photoDao.insertPhotos(photos)
+            }
         }
-        if (items.isNotEmpty()) {
-            itemDao.upsertItems(items)
-        }
-        if (photos.isNotEmpty()) {
-            photoDao.insertPhotos(photos)
+
+        if (boxVaultDatabase != null) {
+            boxVaultDatabase.withTransaction {
+                executeRestore()
+            }
+        } else {
+            executeRestore()
         }
     }
 }

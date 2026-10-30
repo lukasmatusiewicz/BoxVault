@@ -68,7 +68,8 @@ class BackupManagerTest {
             boxDao = database.boxDao(),
             itemDao = database.itemDao(),
             photoDao = database.photoDao(),
-            photoStorageManager = photoStorageManager
+            photoStorageManager = photoStorageManager,
+            boxVaultDatabase = database
         )
         backupManager = BackupManager(
             repository = repository,
@@ -280,6 +281,26 @@ class BackupManagerTest {
         assertTrue(photoStorageManager.photoExists(livePhoto.relativePath))
         assertArrayEquals(livePhotoBytes, photoStorageManager.readPhotoBytes(livePhoto.relativePath))
         assertFalse(photoStorageManager.photoExists("box_tampered.jpg"))
+        assertFalse(backupManager.stagingDirectory.exists())
+    }
+
+    @Test
+    fun `restoreBackupFromZip rejects archive exceeding MAX_ENTRIES`() = runTest(testDispatcher) {
+        val zipBuffer = ByteArrayOutputStream()
+        ZipOutputStream(zipBuffer).use { zipOut ->
+            for (i in 0..BackupManager.MAX_ENTRIES) {
+                zipOut.putNextEntry(ZipEntry("entry_$i.txt"))
+                zipOut.write("x".toByteArray())
+                zipOut.closeEntry()
+            }
+        }
+
+        try {
+            backupManager.restoreBackupFromZip(ByteArrayInputStream(zipBuffer.toByteArray()))
+            fail("Expected SecurityException due to MAX_ENTRIES violation")
+        } catch (e: SecurityException) {
+            assertTrue(e.message?.contains("maximum entry limit") == true)
+        }
         assertFalse(backupManager.stagingDirectory.exists())
     }
 
