@@ -1,6 +1,9 @@
 package com.boxvault.app.ui.screens.boxdetail
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -120,6 +123,31 @@ fun BoxDetailScreen(
         pendingPhotoTargetItemId = null
     }
 
+    var showCameraRationaleDialog by remember { mutableStateOf(false) }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            takePicturePreviewLauncher.launch(null)
+        } else {
+            showCameraRationaleDialog = true
+        }
+    }
+
+    val launchCameraWithPermissionCheck: (String?) -> Unit = { targetItemId ->
+        pendingPhotoTargetItemId = targetItemId
+        val permissionCheck = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        )
+        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+            takePicturePreviewLauncher.launch(null)
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
     val box = uiState.box
 
     Scaffold(
@@ -227,11 +255,11 @@ fun BoxDetailScreen(
                         photos = uiState.boxLevelPhotos,
                         photoStorageManager = photoStorageManager,
                         onCapturePhoto = {
-                            pendingPhotoTargetItemId = null
-                            takePicturePreviewLauncher.launch(null)
+
+                            launchCameraWithPermissionCheck(null)
                         },
                         onPickPhoto = {
-                            pendingPhotoTargetItemId = null
+
                             pickImageLauncher.launch("image/*")
                         },
                         onDeletePhoto = viewModel::deletePhoto
@@ -335,8 +363,8 @@ fun BoxDetailScreen(
                             },
                             onDelete = { viewModel.deleteItem(itemWithPhotos.item.id) },
                             onAttachPhoto = {
-                                pendingPhotoTargetItemId = itemWithPhotos.item.id
-                                takePicturePreviewLauncher.launch(null)
+                                launchCameraWithPermissionCheck(itemWithPhotos.item.id)
+
                             },
                             onDeletePhoto = viewModel::deletePhoto
                         )
@@ -402,6 +430,41 @@ fun BoxDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteBoxConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showCameraRationaleDialog) {
+        AlertDialog(
+            onDismissRequest = { showCameraRationaleDialog = false },
+            title = { Text("Camera Permission Required") },
+            text = {
+                Text(
+                    "BoxVault requires camera access to capture photos of your boxes and items locally. " +
+                        "Camera frames are processed entirely on your device and are never shared.\n\n" +
+                        "You can also choose an existing photo from your local gallery instead."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showCameraRationaleDialog = false
+                        pickImageLauncher.launch("image/*")
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Choose from Gallery")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCameraRationaleDialog = false }) {
                     Text("Cancel")
                 }
             }
