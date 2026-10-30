@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.boxvault.app.data.local.BoxVaultDatabase
 import com.boxvault.app.data.local.entity.BoxEntity
 import com.boxvault.app.data.local.entity.ItemEntity
+import com.boxvault.app.data.local.entity.PhotoEntity
 import com.boxvault.app.data.storage.PhotoStorageManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -43,7 +44,8 @@ class BoxVaultRepositoryTest {
             boxDao = database.boxDao(),
             itemDao = database.itemDao(),
             photoDao = database.photoDao(),
-            photoStorageManager = photoStorageManager
+            photoStorageManager = photoStorageManager,
+            boxVaultDatabase = database
         )
     }
 
@@ -150,5 +152,35 @@ class BoxVaultRepositoryTest {
         assertFalse(photoStorageManager.photoExists(boxPhoto.relativePath))
         assertFalse(photoStorageManager.photoExists(itemPhoto.relativePath))
     }
-}
 
+    @Test
+    fun `replaceAllInventoryData replaces data atomically inside transaction`() = runTest {
+        repository.upsertBox(
+            BoxEntity(
+                id = "box-old-1",
+                shortCode = "BOX-001",
+                name = "Old Box",
+                location = "Attic"
+            )
+        )
+        assertEquals(1, repository.getAllBoxes().size)
+
+        val newBoxes = listOf(
+            BoxEntity(id = "box-new-1", shortCode = "BOX-101", name = "New Box 1", location = "Garage"),
+            BoxEntity(id = "box-new-2", shortCode = "BOX-102", name = "New Box 2", location = "Basement")
+        )
+        val newItems = listOf(
+            ItemEntity(id = "item-new-1", boxId = "box-new-1", name = "New Item 1")
+        )
+        val newPhotos = listOf(
+            PhotoEntity(id = "photo-new-1", boxId = "box-new-1", relativePath = "box_new.jpg")
+        )
+
+        repository.replaceAllInventoryData(newBoxes, newItems, newPhotos)
+
+        assertEquals(2, repository.getAllBoxes().size)
+        assertEquals(1, repository.getAllItems().size)
+        assertEquals(1, repository.getAllPhotos().size)
+        assertFalse(repository.getAllBoxes().any { it.id == "box-old-1" })
+    }
+}
