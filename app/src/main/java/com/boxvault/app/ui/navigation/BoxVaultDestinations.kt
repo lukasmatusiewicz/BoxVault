@@ -4,9 +4,10 @@ import android.net.Uri
 
 object BoxVaultDestinations {
     const val ARG_BOX_ID = "boxId"
+    const val ARG_PRESET_BOX_ID = "presetBoxId"
 
     const val DASHBOARD_ROUTE = "dashboard"
-    const val BOX_EDIT_ROUTE = "box_edit?boxId={$ARG_BOX_ID}"
+    const val BOX_EDIT_ROUTE = "box_edit?boxId={$ARG_BOX_ID}&presetBoxId={$ARG_PRESET_BOX_ID}"
     const val BOX_DETAIL_ROUTE = "box_detail/{$ARG_BOX_ID}"
     const val BULK_ENTRY_ROUTE = "bulk_entry/{$ARG_BOX_ID}"
 
@@ -15,11 +16,22 @@ object BoxVaultDestinations {
     const val PDF_GENERATOR_ROUTE = "pdf_generator?boxId={$ARG_BOX_ID}"
     const val BACKUP_RESTORE_ROUTE = "backup_restore"
 
-    fun boxEditRoute(boxId: String? = null): String {
-        return if (boxId.isNullOrBlank()) {
+    fun boxEditRoute(
+        boxId: String? = null,
+        presetBoxId: String? = null
+    ): String {
+        val params = buildList {
+            if (!boxId.isNullOrBlank()) {
+                add("$ARG_BOX_ID=${Uri.encode(boxId)}")
+            }
+            if (!presetBoxId.isNullOrBlank()) {
+                add("$ARG_PRESET_BOX_ID=${Uri.encode(presetBoxId)}")
+            }
+        }
+        return if (params.isEmpty()) {
             "box_edit"
         } else {
-            "box_edit?boxId=${Uri.encode(boxId)}"
+            "box_edit?${params.joinToString("&")}"
         }
     }
 

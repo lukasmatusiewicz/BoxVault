@@ -15,6 +15,7 @@ import java.util.UUID
 data class BoxEditUiState(
     val isLoading: Boolean = true,
     val isEditMode: Boolean = false,
+    val isPreAllocatedQrLabel: Boolean = false,
     val boxId: String = UUID.randomUUID().toString(),
     val shortCode: String = "",
     val name: String = "",
@@ -34,13 +35,18 @@ data class BoxEditUiState(
 
 class BoxEditViewModel(
     private val repository: BoxVaultRepository,
-    private val initialBoxId: String? = null
+    private val initialBoxId: String? = null,
+    private val presetBoxId: String? = null
 ) : ViewModel() {
+
+    private val effectiveTargetId: String? =
+        initialBoxId?.takeIf { it.isNotBlank() } ?: presetBoxId?.takeIf { it.isNotBlank() }
 
     private val _uiState = MutableStateFlow(
         BoxEditUiState(
-            isEditMode = !initialBoxId.isNullOrBlank(),
-            boxId = initialBoxId?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
+            isEditMode = !initialBoxId.isNullOrBlank() && presetBoxId.isNullOrBlank(),
+            isPreAllocatedQrLabel = !presetBoxId.isNullOrBlank(),
+            boxId = effectiveTargetId ?: UUID.randomUUID().toString()
         )
     )
     val uiState: StateFlow<BoxEditUiState> = _uiState.asStateFlow()
@@ -53,7 +59,7 @@ class BoxEditViewModel(
         }
 
         viewModelScope.launch {
-            val targetId = initialBoxId?.takeIf { it.isNotBlank() }
+            val targetId = effectiveTargetId
             if (targetId != null) {
                 val existing = repository.getBoxById(targetId)
                 if (existing != null) {
@@ -61,6 +67,7 @@ class BoxEditViewModel(
                         it.copy(
                             isLoading = false,
                             isEditMode = true,
+                            isPreAllocatedQrLabel = false,
                             boxId = existing.id,
                             shortCode = existing.shortCode,
                             name = existing.name,
@@ -77,6 +84,8 @@ class BoxEditViewModel(
                         it.copy(
                             isLoading = false,
                             isEditMode = false,
+                            isPreAllocatedQrLabel = true,
+                            boxId = targetId,
                             shortCode = suggestedCode
                         )
                     }
@@ -87,6 +96,7 @@ class BoxEditViewModel(
                     it.copy(
                         isLoading = false,
                         isEditMode = false,
+                        isPreAllocatedQrLabel = false,
                         shortCode = suggestedCode
                     )
                 }
@@ -174,12 +184,13 @@ class BoxEditViewModel(
 
     class Factory(
         private val repository: BoxVaultRepository,
-        private val boxId: String? = null
+        private val boxId: String? = null,
+        private val presetBoxId: String? = null
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(BoxEditViewModel::class.java)) {
-                return BoxEditViewModel(repository, boxId) as T
+                return BoxEditViewModel(repository, boxId, presetBoxId) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }

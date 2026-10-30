@@ -1,6 +1,7 @@
 package com.boxvault.app
 
 import android.app.Application
+import com.boxvault.app.data.backup.BackupManager
 import com.boxvault.app.data.local.BoxVaultDatabase
 import com.boxvault.app.data.repository.BoxVaultRepository
 import com.boxvault.app.data.storage.PhotoStorageManager
@@ -23,5 +24,12 @@ class BoxVaultApplication : Application() {
             photoStorageManager = photoStorageManager
         )
     }
-}
 
+    val backupManager: BackupManager by lazy {
+        BackupManager(
+            context = this,
+            repository = repository,
+            photoStorageManager = photoStorageManager
+        )
+    }
+}

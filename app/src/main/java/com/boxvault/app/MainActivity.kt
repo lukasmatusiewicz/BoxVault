@@ -26,7 +26,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     BoxVaultNavHost(
                         repository = app.repository,
-                        photoStorageManager = app.photoStorageManager
+                        photoStorageManager = app.photoStorageManager,
+                        backupManager = app.backupManager
                     )
                 }
             }
