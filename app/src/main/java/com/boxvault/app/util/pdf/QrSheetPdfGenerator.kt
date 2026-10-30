@@ -235,50 +235,57 @@ object QrSheetPdfGenerator {
                 }
 
                 if (page != null) {
-                    renderPageToCanvas(
-                        canvas = page.canvas,
-                        pageIndex = pageIndex,
-                        totalPages = totalPages,
-                        pageLabels = pageLabels,
-                        preset = preset,
-                        pageSize = pageSize,
-                        drawCutGuides = drawCutGuides,
-                        sharpQrPaint = sharpQrPaint,
-                        whiteBackgroundPaint = whiteBackgroundPaint,
-                        cutGuidePaint = cutGuidePaint,
-                        writeInLinePaint = writeInLinePaint,
-                        headerPaint = headerPaint,
-                        shortCodePaint = shortCodePaint,
-                        titlePaint = titlePaint,
-                        subtitlePaint = subtitlePaint,
-                        uriFooterPaint = uriFooterPaint
-                    )
-                    pdfDocument.finishPage(page)
+                    try {
+                        renderPageToCanvas(
+                            canvas = page.canvas,
+                            pageIndex = pageIndex,
+                            totalPages = totalPages,
+                            pageLabels = pageLabels,
+                            preset = preset,
+                            pageSize = pageSize,
+                            drawCutGuides = drawCutGuides,
+                            sharpQrPaint = sharpQrPaint,
+                            whiteBackgroundPaint = whiteBackgroundPaint,
+                            cutGuidePaint = cutGuidePaint,
+                            writeInLinePaint = writeInLinePaint,
+                            headerPaint = headerPaint,
+                            shortCodePaint = shortCodePaint,
+                            titlePaint = titlePaint,
+                            subtitlePaint = subtitlePaint,
+                            uriFooterPaint = uriFooterPaint
+                        )
+                    } finally {
+                        pdfDocument.finishPage(page)
+                    }
                 } else {
                     val fallbackBitmap = Bitmap.createBitmap(
                         pageSize.widthPt,
                         pageSize.heightPt,
                         Bitmap.Config.ARGB_8888
                     )
-                    val fallbackCanvas = Canvas(fallbackBitmap)
-                    renderPageToCanvas(
-                        canvas = fallbackCanvas,
-                        pageIndex = pageIndex,
-                        totalPages = totalPages,
-                        pageLabels = pageLabels,
-                        preset = preset,
-                        pageSize = pageSize,
-                        drawCutGuides = drawCutGuides,
-                        sharpQrPaint = sharpQrPaint,
-                        whiteBackgroundPaint = whiteBackgroundPaint,
-                        cutGuidePaint = cutGuidePaint,
-                        writeInLinePaint = writeInLinePaint,
-                        headerPaint = headerPaint,
-                        shortCodePaint = shortCodePaint,
-                        titlePaint = titlePaint,
-                        subtitlePaint = subtitlePaint,
-                        uriFooterPaint = uriFooterPaint
-                    )
+                    try {
+                        val fallbackCanvas = Canvas(fallbackBitmap)
+                        renderPageToCanvas(
+                            canvas = fallbackCanvas,
+                            pageIndex = pageIndex,
+                            totalPages = totalPages,
+                            pageLabels = pageLabels,
+                            preset = preset,
+                            pageSize = pageSize,
+                            drawCutGuides = drawCutGuides,
+                            sharpQrPaint = sharpQrPaint,
+                            whiteBackgroundPaint = whiteBackgroundPaint,
+                            cutGuidePaint = cutGuidePaint,
+                            writeInLinePaint = writeInLinePaint,
+                            headerPaint = headerPaint,
+                            shortCodePaint = shortCodePaint,
+                            titlePaint = titlePaint,
+                            subtitlePaint = subtitlePaint,
+                            uriFooterPaint = uriFooterPaint
+                        )
+                    } finally {
+                        fallbackBitmap.recycle()
+                    }
                 }
             }
 
@@ -419,8 +426,12 @@ object QrSheetPdfGenerator {
             sizePx = QR_BITMAP_SIZE_PX,
             marginModules = QR_QUIET_ZONE_MODULES
         )
-        val srcRect = Rect(0, 0, qrBitmap.width, qrBitmap.height)
-        canvas.drawBitmap(qrBitmap, srcRect, qrDestRect, sharpQrPaint)
+        try {
+            val srcRect = Rect(0, 0, qrBitmap.width, qrBitmap.height)
+            canvas.drawBitmap(qrBitmap, srcRect, qrDestRect, sharpQrPaint)
+        } finally {
+            qrBitmap.recycle()
+        }
 
         val textLeft = qrDestRect.right + padding
         val maxTextWidth = (innerRight - textLeft).coerceAtLeast(10f)

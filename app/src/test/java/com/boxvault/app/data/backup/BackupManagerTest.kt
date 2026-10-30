@@ -11,7 +11,9 @@ import com.boxvault.app.data.storage.PhotoStorageManager
 import com.boxvault.app.ui.screens.backup.BackupRestoreViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -55,8 +57,6 @@ class BackupManagerTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         database = Room.inMemoryDatabaseBuilder(context, BoxVaultDatabase::class.java)
             .allowMainThreadQueries()
-            .setQueryExecutor(Runnable::run)
-            .setTransactionExecutor(Runnable::run)
             .build()
         tempFilesDir = Files.createTempDirectory("boxvault_backup_files").toFile()
         tempCacheDir = Files.createTempDirectory("boxvault_backup_cache").toFile()
@@ -68,7 +68,8 @@ class BackupManagerTest {
             boxDao = database.boxDao(),
             itemDao = database.itemDao(),
             photoDao = database.photoDao(),
-            photoStorageManager = photoStorageManager
+            photoStorageManager = photoStorageManager,
+            boxVaultDatabase = database
         )
         backupManager = BackupManager(
             repository = repository,
@@ -284,6 +285,26 @@ class BackupManagerTest {
     }
 
     @Test
+    fun `restoreBackupFromZip rejects archive exceeding MAX_ENTRIES`() = runTest(testDispatcher) {
+        val zipBuffer = ByteArrayOutputStream()
+        ZipOutputStream(zipBuffer).use { zipOut ->
+            for (i in 0..BackupManager.MAX_ENTRIES) {
+                zipOut.putNextEntry(ZipEntry("entry_$i.txt"))
+                zipOut.write("x".toByteArray())
+                zipOut.closeEntry()
+            }
+        }
+
+        try {
+            backupManager.restoreBackupFromZip(ByteArrayInputStream(zipBuffer.toByteArray()))
+            fail("Expected SecurityException due to MAX_ENTRIES violation")
+        } catch (e: SecurityException) {
+            assertTrue(e.message?.contains("maximum entry limit") == true)
+        }
+        assertFalse(backupManager.stagingDirectory.exists())
+    }
+
+    @Test
     fun `BackupRestoreViewModel coordinates export and restore status messages`() = runTest(testDispatcher) {
         repository.createBox(
             name = "Backup VM Test Box",
@@ -295,13 +316,15 @@ class BackupManagerTest {
         val zipBuffer = ByteArrayOutputStream()
         var exportOk = false
         viewModel.exportBackup(zipBuffer) { ok -> exportOk = ok }
-        assertTrue(exportOk)
-        assertNotNull(viewModel.uiState.value.lastExportSummary)
-        assertNotNull(viewModel.uiState.value.statusMessage)
+        val exportState = viewModel.uiState.first { !it.isWorking && (it.lastExportSummary != null || it.errorMessage != null) }
+        assertTrue(exportState.errorMessage ?: "export failed", exportOk)
+        assertNotNull(exportState.lastExportSummary)
+        assertNotNull(exportState.statusMessage)
 
         var restoreOk = false
         viewModel.restoreBackup(ByteArrayInputStream(zipBuffer.toByteArray())) { ok -> restoreOk = ok }
-        assertTrue(restoreOk)
-        assertNotNull(viewModel.uiState.value.lastRestoreSummary)
+        val restoreState = viewModel.uiState.first { !it.isWorking && (it.lastRestoreSummary != null || it.errorMessage != null) }
+        assertTrue(restoreState.errorMessage ?: "restore failed", restoreOk)
+        assertNotNull(restoreState.lastRestoreSummary)
     }
 }

@@ -75,6 +75,8 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 @kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -335,10 +337,17 @@ private fun CameraXQrPreview(
         BarcodeScanning.getClient(options)
     }
 
+    val cameraProviderRef = remember { AtomicReference<ProcessCameraProvider?>(null) }
+    val imageAnalysisRef = remember { AtomicReference<ImageAnalysis?>(null) }
+    val isActive = remember { AtomicBoolean(true) }
+
     DisposableEffect(Unit) {
         onDispose {
-            runCatching { barcodeScanner.close() }
+            isActive.set(false)
+            runCatching { imageAnalysisRef.get()?.clearAnalyzer() }
+            runCatching { cameraProviderRef.get()?.unbindAll() }
             runCatching { analysisExecutor.shutdown() }
+            runCatching { barcodeScanner.close() }
         }
     }
 
@@ -353,8 +362,15 @@ private fun CameraXQrPreview(
             val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
             cameraProviderFuture.addListener(
                 {
+                    if (!isActive.get()) {
+                        val cameraProvider = runCatching { cameraProviderFuture.get() }.getOrNull()
+                        cameraProvider?.unbindAll()
+                        return@addListener
+                    }
+
                     val cameraProvider = runCatching { cameraProviderFuture.get() }.getOrNull()
                         ?: return@addListener
+                    cameraProviderRef.set(cameraProvider)
 
                     val preview = Preview.Builder().build().also {
                         it.surfaceProvider = previewView.surfaceProvider
@@ -365,8 +381,19 @@ private fun CameraXQrPreview(
                         .setTargetResolution(Size(1280, 720))
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build()
+                    imageAnalysisRef.set(imageAnalysis)
+
+                    if (!isActive.get()) {
+                        imageAnalysis.clearAnalyzer()
+                        cameraProvider.unbindAll()
+                        return@addListener
+                    }
 
                     imageAnalysis.setAnalyzer(analysisExecutor) { imageProxy ->
+                        if (!isActive.get() || analysisExecutor.isShutdown) {
+                            imageProxy.close()
+                            return@setAnalyzer
+                        }
                         val mediaImage = imageProxy.image
                         if (mediaImage != null) {
                             val inputImage = InputImage.fromMediaImage(
@@ -375,6 +402,7 @@ private fun CameraXQrPreview(
                             )
                             barcodeScanner.process(inputImage)
                                 .addOnSuccessListener { barcodes ->
+                                    if (!isActive.get()) return@addOnSuccessListener
                                     val firstQr = barcodes.firstOrNull { !it.rawValue.isNullOrBlank() }
                                     val rawValue = firstQr?.rawValue
                                     if (!rawValue.isNullOrBlank()) {
@@ -390,6 +418,11 @@ private fun CameraXQrPreview(
                     }
 
                     runCatching {
+                        if (!isActive.get()) {
+                            imageAnalysis.clearAnalyzer()
+                            cameraProvider.unbindAll()
+                            return@addListener
+                        }
                         cameraProvider.unbindAll()
                         val camera = cameraProvider.bindToLifecycle(
                             lifecycleOwner,
@@ -397,7 +430,11 @@ private fun CameraXQrPreview(
                             preview,
                             imageAnalysis
                         )
-                        onCameraBound(camera)
+                        if (isActive.get()) {
+                            onCameraBound(camera)
+                        } else {
+                            cameraProvider.unbindAll()
+                        }
                     }
                 },
                 ContextCompat.getMainExecutor(ctx)

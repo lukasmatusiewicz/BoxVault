@@ -1,6 +1,8 @@
 package com.boxvault.app.ui.screens.boxdetail
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.boxvault.app.data.local.BoxVaultDatabase
@@ -103,7 +105,7 @@ class BoxEditAndDetailViewModelTest {
             location = "Office Closet"
         )
 
-        val detailVm = BoxDetailViewModel(repository, box.id)
+        val detailVm = BoxDetailViewModel(repository, box.id, testDispatcher)
         detailVm.uiState.first { !it.isLoading && it.box != null }
 
         // Add item
@@ -143,5 +145,54 @@ class BoxEditAndDetailViewModelTest {
         detailVm.deletePhoto(photo.id)
         detailVm.uiState.first { it.boxLevelPhotos.isEmpty() }
         assertFalse(photoStorageManager.photoExists(photo.relativePath))
+    }
+
+    @Test
+    fun `attachPhotoFromBitmap converts and attaches photo asynchronously`() = runTest(testDispatcher) {
+        val box = repository.createBox(
+            name = "Bitmap Box",
+            shortCode = "BOX-020",
+            location = "Office"
+        )
+        val detailVm = BoxDetailViewModel(repository, box.id, testDispatcher)
+        detailVm.uiState.first { !it.isLoading && it.box != null }
+
+        val testBitmap = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+        detailVm.attachPhotoFromBitmap(testBitmap)
+
+        val state = detailVm.uiState.first { it.boxLevelPhotos.size == 1 }
+        val photo = state.boxLevelPhotos.first()
+        assertTrue(photoStorageManager.photoExists(photo.relativePath))
+    }
+
+    @Test
+    fun `attachPhotoFromUri attaches photo to item asynchronously`() = runTest(testDispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val box = repository.createBox(
+            name = "URI Box",
+            shortCode = "BOX-021",
+            location = "Office"
+        )
+        val item = repository.createItem(
+            boxId = box.id,
+            name = "Item with photo"
+        )
+        val detailVm = BoxDetailViewModel(repository, box.id, testDispatcher)
+        detailVm.uiState.first { !it.isLoading && it.box != null }
+
+        val tempImageFile = File(context.cacheDir, "test_picker_${System.currentTimeMillis()}.png").apply {
+            writeBytes(byteArrayOf(1, 2, 3, 4, 5))
+        }
+        val fileUri = Uri.fromFile(tempImageFile)
+
+        detailVm.attachPhotoFromUri(context.contentResolver, fileUri, targetItemId = item.id)
+
+        val state = detailVm.uiState.first { s ->
+            s.itemsWithPhotos.any { it.item.id == item.id && it.photos.isNotEmpty() }
+        }
+        val itemPhotos = state.itemsWithPhotos.first { it.item.id == item.id }.photos
+        assertEquals(1, itemPhotos.size)
+        assertTrue(photoStorageManager.photoExists(itemPhotos.first().relativePath))
+        tempImageFile.delete()
     }
 }

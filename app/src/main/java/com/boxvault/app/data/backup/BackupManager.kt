@@ -47,10 +47,12 @@ data class BackupRestoreSummary(
  * 2. **Strict Zip-Slip Protection**: Every `ZipEntry` name is canonically resolved against
  *    `restore_staging`; any entry containing `..`, absolute paths, or escaping the staging root
  *    immediately throws [SecurityException] before touching live data.
- * 3. **Cryptographic SHA-256 Verification**: Every photo file in `backup_manifest.json` carries
+ * 3. **Cumulative Archive Defenses (Zip-Bomb Protection)**: Strictly limits archives to
+ *    [MAX_ENTRIES] (5,000) entries and [MAX_TOTAL_ARCHIVE_BYTES] (1 GB) total extracted bytes.
+ * 4. **Cryptographic SHA-256 Verification**: Every photo file in `backup_manifest.json` carries
  *    a SHA-256 hex digest verified during staging; any tampered or missing file aborts the restore
  *    with [SecurityException].
- * 4. **Guaranteed Staging Cleanup**: `cacheDir/restore_staging` is always wiped in a `finally` block.
+ * 5. **Guaranteed Staging Cleanup**: `cacheDir/restore_staging` is always wiped in a `finally` block.
  */
 class BackupManager(
     private val repository: BoxVaultRepository,
@@ -184,7 +186,7 @@ class BackupManager(
      * Extracts and validates a backup `.zip` inside `cacheDir/restore_staging` before
      * atomically replacing live database records and internal photo files.
      *
-     * @throws SecurityException if Zip-Slip path traversal or SHA-256 tampering is detected.
+     * @throws SecurityException if Zip-Slip path traversal, cumulative zip limits, or SHA-256 tampering is detected.
      * @throws IllegalArgumentException if the archive is not a valid BoxVault backup.
      */
     suspend fun restoreBackupFromZip(
@@ -197,11 +199,17 @@ class BackupManager(
         stagingRoot.mkdirs()
 
         try {
-            // Phase 1: Safe extraction into staging directory with Zip-Slip enforcement
+            // Phase 1: Safe extraction into staging directory with Zip-Slip & cumulative archive limits
             var entryCount = 0
+            var cumulativeExtractedBytes = 0L
             ZipInputStream(BufferedInputStream(inputStream)).use { zipIn ->
                 var entry: ZipEntry? = zipIn.nextEntry
                 while (entry != null) {
+                    entryCount++
+                    if (entryCount > MAX_ENTRIES) {
+                        throw SecurityException("ZIP archive exceeds maximum entry limit ($MAX_ENTRIES entries).")
+                    }
+
                     val currentEntry = entry
                     val targetFile = resolveSafeStagingFile(stagingRoot, currentEntry.name)
 
@@ -209,10 +217,16 @@ class BackupManager(
                         targetFile.mkdirs()
                     } else {
                         targetFile.parentFile?.mkdirs()
-                        targetFile.outputStream().use { fileOut ->
-                            copyWithSizeLimit(zipIn, fileOut, MAX_SINGLE_ENTRY_BYTES)
+                        val bytesWritten = targetFile.outputStream().use { fileOut ->
+                            copyWithSizeLimits(
+                                input = zipIn,
+                                output = fileOut,
+                                maxSingleEntryBytes = MAX_SINGLE_ENTRY_BYTES,
+                                currentCumulativeBytes = cumulativeExtractedBytes,
+                                maxCumulativeBytes = MAX_TOTAL_ARCHIVE_BYTES
+                            )
                         }
-                        entryCount++
+                        cumulativeExtractedBytes += bytesWritten
                     }
                     zipIn.closeEntry()
                     entry = zipIn.nextEntry
@@ -419,22 +433,36 @@ class BackupManager(
         return result
     }
 
-    private fun copyWithSizeLimit(
+    private fun copyWithSizeLimits(
         input: InputStream,
         output: OutputStream,
-        maxBytes: Long
-    ) {
+        maxSingleEntryBytes: Long,
+        currentCumulativeBytes: Long,
+        maxCumulativeBytes: Long
+    ): Long {
         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
         var totalRead = 0L
         while (true) {
             val read = input.read(buffer)
             if (read <= 0) break
             totalRead += read
-            if (totalRead > maxBytes) {
-                throw SecurityException("ZIP entry exceeds maximum allowed size ($maxBytes bytes).")
+            if (totalRead > maxSingleEntryBytes) {
+                throw SecurityException("ZIP entry exceeds maximum allowed single entry size ($maxSingleEntryBytes bytes).")
+            }
+            if (currentCumulativeBytes + totalRead > maxCumulativeBytes) {
+                throw SecurityException("ZIP archive exceeds maximum total extracted size ($maxCumulativeBytes bytes).")
             }
             output.write(buffer, 0, read)
         }
+        return totalRead
+    }
+
+    private fun copyWithSizeLimit(
+        input: InputStream,
+        output: OutputStream,
+        maxBytes: Long
+    ) {
+        copyWithSizeLimits(input, output, maxBytes, 0L, Long.MAX_VALUE)
     }
 
     companion object {
@@ -442,7 +470,9 @@ class BackupManager(
         const val MANIFEST_FILE_NAME = "backup_manifest.json"
         const val PHOTOS_ZIP_PREFIX = "photos/"
         const val STAGING_DIR_NAME = "restore_staging"
-        private const val MAX_SINGLE_ENTRY_BYTES = 50L * 1024L * 1024L // 50 MB per file guard
+        const val MAX_ENTRIES = 5_000
+        const val MAX_TOTAL_ARCHIVE_BYTES = 1L * 1024L * 1024L * 1024L // 1 GB cumulative archive guard
+        const val MAX_SINGLE_ENTRY_BYTES = 50L * 1024L * 1024L // 50 MB per file guard
 
         fun computeSha256Hex(bytes: ByteArray): String {
             val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
@@ -457,4 +487,3 @@ class BackupManager(
         }
     }
 }
-
