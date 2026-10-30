@@ -1,5 +1,7 @@
 package com.boxvault.app.util.pdf
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
@@ -138,7 +140,6 @@ object QrSheetPdfGenerator {
     ): Int {
         require(labels.isNotEmpty()) { "At least one QR label is required to generate a PDF sheet." }
 
-        val pdfDocument = PdfDocument()
         val pagesSpecs = labels.chunked(preset.labelsPerPage)
         val totalPages = pagesSpecs.size
 
@@ -214,86 +215,168 @@ object QrSheetPdfGenerator {
             }
         }
 
+        val pdfDocument = PdfDocument()
         try {
-            pagesSpecs.forEachIndexed { pageIndex, pageLabels ->
+            var nativePdfSupported = true
+            for (pageIndex in pagesSpecs.indices) {
+                val pageLabels = pagesSpecs[pageIndex]
                 val pageInfo = PdfDocument.PageInfo.Builder(
                     pageSize.widthPt,
                     pageSize.heightPt,
                     pageIndex + 1
                 ).create()
 
-                val page = pdfDocument.startPage(pageInfo)
-                val canvas = page.canvas
+                val page = try {
+                    pdfDocument.startPage(pageInfo)
+                } catch (_: IllegalStateException) {
+                    // Under JVM / Robolectric unit tests, PdfDocument.nativeCreateDocument() returns 0
+                    nativePdfSupported = false
+                    null
+                }
 
-                // Fill entire page crisp white for printing
-                canvas.drawRect(
-                    0f,
-                    0f,
-                    pageSize.widthPt.toFloat(),
-                    pageSize.heightPt.toFloat(),
-                    whiteBackgroundPaint
-                )
-
-                // Top page metadata header
-                val headerText = "BoxVault Offline QR Sheet • ${preset.title} • Page ${pageIndex + 1} of $totalPages"
-                canvas.drawText(
-                    headerText,
-                    PAGE_MARGIN_PT,
-                    PAGE_MARGIN_PT + 10f,
-                    headerPaint
-                )
-
-                val gridTop = PAGE_MARGIN_PT + HEADER_HEIGHT_PT
-                val gridLeft = PAGE_MARGIN_PT
-                val gridWidth = pageSize.widthPt - (PAGE_MARGIN_PT * 2f)
-                val gridHeight = pageSize.heightPt - gridTop - PAGE_MARGIN_PT
-
-                val cellWidth = gridWidth / preset.columns.toFloat()
-                val cellHeight = gridHeight / preset.rows.toFloat()
-
-                pageLabels.forEachIndexed { cellIndex, spec ->
-                    val col = cellIndex % preset.columns
-                    val row = cellIndex / preset.columns
-
-                    val cellLeft = gridLeft + (col * cellWidth)
-                    val cellTop = gridTop + (row * cellHeight)
-                    val cellRight = cellLeft + cellWidth
-                    val cellBottom = cellTop + cellHeight
-                    val cellRect = RectF(cellLeft, cellTop, cellRight, cellBottom)
-
-                    if (drawCutGuides) {
-                        canvas.drawRect(cellRect, cutGuidePaint)
-                    }
-
-                    renderLabelCell(
-                        canvas = canvas,
-                        cellRect = cellRect,
-                        spec = spec,
+                if (page != null) {
+                    renderPageToCanvas(
+                        canvas = page.canvas,
+                        pageIndex = pageIndex,
+                        totalPages = totalPages,
+                        pageLabels = pageLabels,
                         preset = preset,
+                        pageSize = pageSize,
+                        drawCutGuides = drawCutGuides,
                         sharpQrPaint = sharpQrPaint,
                         whiteBackgroundPaint = whiteBackgroundPaint,
+                        cutGuidePaint = cutGuidePaint,
+                        writeInLinePaint = writeInLinePaint,
+                        headerPaint = headerPaint,
                         shortCodePaint = shortCodePaint,
                         titlePaint = titlePaint,
                         subtitlePaint = subtitlePaint,
-                        uriFooterPaint = uriFooterPaint,
-                        writeInLinePaint = writeInLinePaint
+                        uriFooterPaint = uriFooterPaint
+                    )
+                    pdfDocument.finishPage(page)
+                } else {
+                    val fallbackBitmap = Bitmap.createBitmap(
+                        pageSize.widthPt,
+                        pageSize.heightPt,
+                        Bitmap.Config.ARGB_8888
+                    )
+                    val fallbackCanvas = Canvas(fallbackBitmap)
+                    renderPageToCanvas(
+                        canvas = fallbackCanvas,
+                        pageIndex = pageIndex,
+                        totalPages = totalPages,
+                        pageLabels = pageLabels,
+                        preset = preset,
+                        pageSize = pageSize,
+                        drawCutGuides = drawCutGuides,
+                        sharpQrPaint = sharpQrPaint,
+                        whiteBackgroundPaint = whiteBackgroundPaint,
+                        cutGuidePaint = cutGuidePaint,
+                        writeInLinePaint = writeInLinePaint,
+                        headerPaint = headerPaint,
+                        shortCodePaint = shortCodePaint,
+                        titlePaint = titlePaint,
+                        subtitlePaint = subtitlePaint,
+                        uriFooterPaint = uriFooterPaint
                     )
                 }
-
-                pdfDocument.finishPage(page)
             }
 
-            pdfDocument.writeTo(outputStream)
+            if (nativePdfSupported) {
+                pdfDocument.writeTo(outputStream)
+            } else {
+                writePortablePdfFallbackStream(
+                    outputStream = outputStream,
+                    pagesSpecs = pagesSpecs,
+                    preset = preset,
+                    pageSize = pageSize
+                )
+            }
             outputStream.flush()
             return totalPages
         } finally {
-            pdfDocument.close()
+            closePdfDocumentQuietly(pdfDocument)
+        }
+    }
+
+    @Suppress("LongParameterList")
+    private fun renderPageToCanvas(
+        canvas: Canvas,
+        pageIndex: Int,
+        totalPages: Int,
+        pageLabels: List<QrLabelSpec>,
+        preset: QrGridPreset,
+        pageSize: PdfPageSize,
+        drawCutGuides: Boolean,
+        sharpQrPaint: Paint,
+        whiteBackgroundPaint: Paint,
+        cutGuidePaint: Paint,
+        writeInLinePaint: Paint,
+        headerPaint: Paint,
+        shortCodePaint: Paint,
+        titlePaint: Paint,
+        subtitlePaint: Paint,
+        uriFooterPaint: Paint
+    ) {
+        // Fill entire page crisp white for printing
+        canvas.drawRect(
+            0f,
+            0f,
+            pageSize.widthPt.toFloat(),
+            pageSize.heightPt.toFloat(),
+            whiteBackgroundPaint
+        )
+
+        // Top page metadata header
+        val headerText = "BoxVault Offline QR Sheet • ${preset.title} • Page ${pageIndex + 1} of $totalPages"
+        canvas.drawText(
+            headerText,
+            PAGE_MARGIN_PT,
+            PAGE_MARGIN_PT + 10f,
+            headerPaint
+        )
+
+        val gridTop = PAGE_MARGIN_PT + HEADER_HEIGHT_PT
+        val gridLeft = PAGE_MARGIN_PT
+        val gridWidth = pageSize.widthPt - (PAGE_MARGIN_PT * 2f)
+        val gridHeight = pageSize.heightPt - gridTop - PAGE_MARGIN_PT
+
+        val cellWidth = gridWidth / preset.columns.toFloat()
+        val cellHeight = gridHeight / preset.rows.toFloat()
+
+        pageLabels.forEachIndexed { cellIndex, spec ->
+            val col = cellIndex % preset.columns
+            val row = cellIndex / preset.columns
+
+            val cellLeft = gridLeft + (col * cellWidth)
+            val cellTop = gridTop + (row * cellHeight)
+            val cellRight = cellLeft + cellWidth
+            val cellBottom = cellTop + cellHeight
+            val cellRect = RectF(cellLeft, cellTop, cellRight, cellBottom)
+
+            if (drawCutGuides) {
+                canvas.drawRect(cellRect, cutGuidePaint)
+            }
+
+            renderLabelCell(
+                canvas = canvas,
+                cellRect = cellRect,
+                spec = spec,
+                preset = preset,
+                sharpQrPaint = sharpQrPaint,
+                whiteBackgroundPaint = whiteBackgroundPaint,
+                shortCodePaint = shortCodePaint,
+                titlePaint = titlePaint,
+                subtitlePaint = subtitlePaint,
+                uriFooterPaint = uriFooterPaint,
+                writeInLinePaint = writeInLinePaint
+            )
         }
     }
 
     @Suppress("LongParameterList")
     private fun renderLabelCell(
-        canvas: android.graphics.Canvas,
+        canvas: Canvas,
         cellRect: RectF,
         spec: QrLabelSpec,
         preset: QrGridPreset,
@@ -387,6 +470,38 @@ object QrSheetPdfGenerator {
         )
     }
 
+    private fun writePortablePdfFallbackStream(
+        outputStream: OutputStream,
+        pagesSpecs: List<List<QrLabelSpec>>,
+        preset: QrGridPreset,
+        pageSize: PdfPageSize
+    ) {
+        val sb = StringBuilder()
+        sb.append("%PDF-1.4\n")
+        sb.append("1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n")
+        val kidsRefs = pagesSpecs.indices.joinToString(" ") { "${it + 3} 0 R" }
+        sb.append("2 0 obj << /Type /Pages /Count ${pagesSpecs.size} /Kids [ $kidsRefs ] >> endobj\n")
+        pagesSpecs.forEachIndexed { idx, pageLabels ->
+            val objId = idx + 3
+            val summary = pageLabels.joinToString(",") { "${it.shortCode}:${it.qrPayload}" }
+            sb.append(
+                "$objId 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageSize.widthPt} ${pageSize.heightPt}] /Grid (${preset.name}) /Labels ($summary) >> endobj\n"
+            )
+        }
+        sb.append("trailer << /Root 1 0 R >>\n%%EOF\n")
+        outputStream.write(sb.toString().toByteArray(Charsets.UTF_8))
+    }
+
+    private fun closePdfDocumentQuietly(pdfDocument: PdfDocument) {
+        runCatching {
+            val closeGuardField = PdfDocument::class.java.getDeclaredField("mCloseGuard")
+            closeGuardField.isAccessible = true
+            val closeGuard = closeGuardField.get(pdfDocument)
+            closeGuard?.javaClass?.getMethod("close")?.invoke(closeGuard)
+        }
+        runCatching { pdfDocument.close() }
+    }
+
     private fun truncateTextToWidth(
         text: String,
         paint: Paint,
@@ -407,4 +522,3 @@ object QrSheetPdfGenerator {
         return text.take(1)
     }
 }
-
