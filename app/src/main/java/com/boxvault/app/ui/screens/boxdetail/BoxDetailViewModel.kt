@@ -1,5 +1,8 @@
 package com.boxvault.app.ui.screens.boxdetail
 
+import android.content.ContentResolver
+import android.graphics.Bitmap
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -9,12 +12,15 @@ import com.boxvault.app.data.local.entity.PhotoEntity
 import com.boxvault.app.data.local.model.BoxWithItemsAndPhotos
 import com.boxvault.app.data.local.model.ItemWithPhotos
 import com.boxvault.app.data.repository.BoxVaultRepository
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 
 data class BoxDetailUiState(
     val isLoading: Boolean = true,
@@ -39,7 +45,8 @@ data class BoxDetailUiState(
 
 class BoxDetailViewModel(
     private val repository: BoxVaultRepository,
-    val boxId: String
+    val boxId: String,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
 
     private val _itemFilterQuery = MutableStateFlow("")
@@ -165,9 +172,49 @@ class BoxDetailViewModel(
         }
     }
 
+    fun attachPhotoFromUri(
+        contentResolver: ContentResolver,
+        uri: Uri,
+        targetItemId: String? = null
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            runCatching {
+                val rawBytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    ?: throw IllegalArgumentException("Cannot open image stream from URI: $uri")
+                if (targetItemId != null) {
+                    repository.attachPhotoToItem(boxId = boxId, itemId = targetItemId, imageBytes = rawBytes)
+                } else {
+                    repository.attachPhotoToBox(boxId = boxId, imageBytes = rawBytes)
+                }
+            }.onFailure { err ->
+                _uiState.update { it.copy(errorMessage = err.message ?: "Failed to attach photo.") }
+            }
+        }
+    }
+
+    fun attachPhotoFromBitmap(
+        bitmap: Bitmap,
+        targetItemId: String? = null
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            runCatching {
+                val stream = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                val rawBytes = stream.toByteArray()
+                if (targetItemId != null) {
+                    repository.attachPhotoToItem(boxId = boxId, itemId = targetItemId, imageBytes = rawBytes)
+                } else {
+                    repository.attachPhotoToBox(boxId = boxId, imageBytes = rawBytes)
+                }
+            }.onFailure { err ->
+                _uiState.update { it.copy(errorMessage = err.message ?: "Failed to attach photo.") }
+            }
+        }
+    }
+
     fun attachPhotoToBox(imageBytes: ByteArray) {
         if (imageBytes.isEmpty()) return
-        viewModelScope.launch {
+        viewModelScope.launch(ioDispatcher) {
             runCatching {
                 repository.attachPhotoToBox(boxId = boxId, imageBytes = imageBytes)
             }.onFailure { err ->
@@ -178,7 +225,7 @@ class BoxDetailViewModel(
 
     fun attachPhotoToItem(itemId: String, imageBytes: ByteArray) {
         if (imageBytes.isEmpty()) return
-        viewModelScope.launch {
+        viewModelScope.launch(ioDispatcher) {
             runCatching {
                 repository.attachPhotoToItem(
                     boxId = boxId,
@@ -211,12 +258,13 @@ class BoxDetailViewModel(
 
     class Factory(
         private val repository: BoxVaultRepository,
-        private val boxId: String
+        private val boxId: String,
+        private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(BoxDetailViewModel::class.java)) {
-                return BoxDetailViewModel(repository, boxId) as T
+                return BoxDetailViewModel(repository, boxId, ioDispatcher) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }

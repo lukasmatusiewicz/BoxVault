@@ -79,7 +79,6 @@ import com.boxvault.app.data.local.model.ItemWithPhotos
 import com.boxvault.app.data.storage.PhotoStorageManager
 import com.boxvault.app.ui.components.LocalPhotoThumbnail
 import com.boxvault.app.ui.theme.parseBoxColor
-import com.boxvault.app.util.image.PhotoCompressor
 import com.boxvault.app.util.qr.QrCodeGenerator
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,39 +100,22 @@ fun BoxDetailScreen(
     var showQrPreviewDialog by remember { mutableStateOf(false) }
     var pendingPhotoTargetItemId by remember { mutableStateOf<String?>(null) }
 
-    // Camera capture launcher (100% local in-memory bitmap -> downsampled 80% JPEG bytes)
+    // Camera capture launcher (100% local photo -> background IO processing in ViewModel)
     val takePicturePreviewLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
         if (bitmap != null) {
-            val bytes = PhotoCompressor.compressBitmapToJpeg(bitmap)
-            val targetItemId = pendingPhotoTargetItemId
-            if (targetItemId != null) {
-                viewModel.attachPhotoToItem(targetItemId, bytes)
-            } else {
-                viewModel.attachPhotoToBox(bytes)
-            }
+            viewModel.attachPhotoFromBitmap(bitmap, pendingPhotoTargetItemId)
         }
         pendingPhotoTargetItemId = null
     }
 
-    // Local Gallery file picker launcher (100% local URI stream -> Exif normalized & downsampled)
+    // Local Gallery file picker launcher (100% local URI -> background IO processing in ViewModel)
     val pickImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            val rawBytes = runCatching {
-                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            }.getOrNull()
-            if (rawBytes != null && rawBytes.isNotEmpty()) {
-                val compressedBytes = PhotoCompressor.compressAndNormalize(rawBytes)
-                val targetItemId = pendingPhotoTargetItemId
-                if (targetItemId != null) {
-                    viewModel.attachPhotoToItem(targetItemId, compressedBytes)
-                } else {
-                    viewModel.attachPhotoToBox(compressedBytes)
-                }
-            }
+            viewModel.attachPhotoFromUri(context.contentResolver, uri, pendingPhotoTargetItemId)
         }
         pendingPhotoTargetItemId = null
     }
