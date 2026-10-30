@@ -109,6 +109,28 @@ class BoxVaultRepository(
         }
     }
 
+    suspend fun createBox(
+        name: String,
+        shortCode: String? = null,
+        location: String,
+        category: String = "General",
+        colorHex: String = "#F59E0B",
+        notes: String = ""
+    ): BoxEntity {
+        val resolvedShortCode = shortCode?.trim()?.takeIf { it.isNotEmpty() }
+            ?: generateNextShortCode()
+        return upsertBox(
+            BoxEntity(
+                shortCode = resolvedShortCode,
+                name = name,
+                location = location,
+                category = category,
+                colorHex = colorHex,
+                notes = notes
+            )
+        )
+    }
+
     suspend fun upsertBox(box: BoxEntity): BoxEntity {
         val now = System.currentTimeMillis()
         val updated = box.copy(
@@ -135,6 +157,24 @@ class BoxVaultRepository(
             .forEach { relativePath ->
                 runCatching { photoStorageManager.deletePhotoFile(relativePath) }
             }
+    }
+
+    suspend fun createItem(
+        boxId: String,
+        name: String,
+        quantity: Int = 1,
+        category: String = "General",
+        notes: String = ""
+    ): ItemEntity {
+        return upsertItem(
+            ItemEntity(
+                boxId = boxId,
+                name = name,
+                quantity = quantity,
+                category = category,
+                notes = notes
+            )
+        )
     }
 
     suspend fun upsertItem(item: ItemEntity): ItemEntity {
