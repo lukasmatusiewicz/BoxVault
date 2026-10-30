@@ -30,6 +30,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.BoxVault">
 
+        <!--
+            ML Kit Datatransport Removal:
+            BoxVault is strictly offline and privacy-first.
+            Strip transitive background telemetry and upload scheduler services.
+        -->
+        <service
+            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
+            tools:node="remove" />
+        <service
+            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
+            tools:node="remove" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
