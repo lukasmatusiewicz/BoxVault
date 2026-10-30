@@ -46,9 +46,15 @@ object PhotoCompressor {
     ): ByteArray {
         val scaled = downsampleBitmap(source, maxEdgePx)
         val clampedQuality = quality.coerceIn(10, 100)
-        return ByteArrayOutputStream().use { output ->
-            scaled.compress(Bitmap.CompressFormat.JPEG, clampedQuality, output)
-            output.toByteArray()
+        return try {
+            ByteArrayOutputStream().use { output ->
+                scaled.compress(Bitmap.CompressFormat.JPEG, clampedQuality, output)
+                output.toByteArray()
+            }
+        } finally {
+            if (scaled != source) {
+                scaled.recycle()
+            }
         }
     }
 
@@ -158,13 +164,21 @@ object PhotoCompressor {
             decodeOptions
         ) ?: return rawImageBytes
 
-        val orientation = readExifOrientation(rawImageBytes)
-        val oriented = applyExifOrientation(decoded, orientation)
-        return compressBitmapToJpeg(
-            source = oriented,
-            maxEdgePx = clampedMaxEdge,
-            quality = quality
-        )
+        var oriented: Bitmap? = null
+        try {
+            val orientation = readExifOrientation(rawImageBytes)
+            oriented = applyExifOrientation(decoded, orientation)
+            return compressBitmapToJpeg(
+                source = oriented,
+                maxEdgePx = clampedMaxEdge,
+                quality = quality
+            )
+        } finally {
+            if (oriented != null && oriented != decoded) {
+                oriented.recycle()
+            }
+            decoded.recycle()
+        }
     }
 
     internal fun calculateInSampleSize(
