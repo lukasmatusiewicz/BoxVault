@@ -235,25 +235,28 @@ object QrSheetPdfGenerator {
                 }
 
                 if (page != null) {
-                    renderPageToCanvas(
-                        canvas = page.canvas,
-                        pageIndex = pageIndex,
-                        totalPages = totalPages,
-                        pageLabels = pageLabels,
-                        preset = preset,
-                        pageSize = pageSize,
-                        drawCutGuides = drawCutGuides,
-                        sharpQrPaint = sharpQrPaint,
-                        whiteBackgroundPaint = whiteBackgroundPaint,
-                        cutGuidePaint = cutGuidePaint,
-                        writeInLinePaint = writeInLinePaint,
-                        headerPaint = headerPaint,
-                        shortCodePaint = shortCodePaint,
-                        titlePaint = titlePaint,
-                        subtitlePaint = subtitlePaint,
-                        uriFooterPaint = uriFooterPaint
-                    )
-                    pdfDocument.finishPage(page)
+                    try {
+                        renderPageToCanvas(
+                            canvas = page.canvas,
+                            pageIndex = pageIndex,
+                            totalPages = totalPages,
+                            pageLabels = pageLabels,
+                            preset = preset,
+                            pageSize = pageSize,
+                            drawCutGuides = drawCutGuides,
+                            sharpQrPaint = sharpQrPaint,
+                            whiteBackgroundPaint = whiteBackgroundPaint,
+                            cutGuidePaint = cutGuidePaint,
+                            writeInLinePaint = writeInLinePaint,
+                            headerPaint = headerPaint,
+                            shortCodePaint = shortCodePaint,
+                            titlePaint = titlePaint,
+                            subtitlePaint = subtitlePaint,
+                            uriFooterPaint = uriFooterPaint
+                        )
+                    } finally {
+                        pdfDocument.finishPage(page)
+                    }
                 } else {
                     val fallbackBitmap = Bitmap.createBitmap(
                         pageSize.widthPt,
