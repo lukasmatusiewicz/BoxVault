@@ -25,6 +25,11 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Grant execute permission for gradlew
+        run: |
+          sed -i 's/\r$//' gradlew
+          chmod +x gradlew
+
       - name: Setup Gradle with Cache
         uses: gradle/actions/setup-gradle@v4
 
@@ -112,4 +117,3 @@ jobs:
         with:
           name: boxvault-debug-apk
           path: app/build/outputs/apk/debug/*.apk
-
