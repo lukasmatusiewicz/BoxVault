@@ -58,8 +58,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.boxvault.app.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.ui.theme.DefaultBoxColorOptions
 import com.boxvault.app.ui.theme.parseBoxColor
@@ -112,9 +114,9 @@ fun BoxEditScreen(
                 title = {
                     Text(
                         text = when {
-                            uiState.isEditMode -> "Edit Storage Box"
-                            uiState.isPreAllocatedQrLabel -> "Assign Pre-Printed QR Label"
-                            else -> "New Storage Box"
+                            uiState.isEditMode -> stringResource(R.string.box_edit_title_edit)
+                            uiState.isPreAllocatedQrLabel -> stringResource(R.string.box_edit_title_assign_qr)
+                            else -> stringResource(R.string.box_edit_title_new)
                         },
                         fontWeight = FontWeight.Bold
                     )
@@ -123,7 +125,7 @@ fun BoxEditScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.common_back)
                         )
                     }
                 },
@@ -138,7 +140,7 @@ fun BoxEditScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Save Box")
+                        Text(stringResource(R.string.box_edit_save_box))
                     }
                 }
             )
@@ -171,13 +173,13 @@ fun BoxEditScreen(
                         )
                         Column {
                             Text(
-                                text = "Unassigned Pre-Printed QR Sticker Detected",
+                                text = stringResource(R.string.box_edit_preprinted_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                             Text(
-                                text = "Saving this box binds it permanently to the scanned QR code (${uiState.boxId.take(8)}…).",
+                                text = stringResource(R.string.box_edit_preprinted_desc, uiState.boxId.take(8)),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
@@ -220,7 +222,7 @@ fun BoxEditScreen(
                     if (qrBitmap != null) {
                         Image(
                             bitmap = qrBitmap.asImageBitmap(),
-                            contentDescription = "QR Code Preview",
+                            contentDescription = stringResource(R.string.box_edit_qr_preview_cd),
                             filterQuality = FilterQuality.None,
                             modifier = Modifier
                                 .size(56.dp)
@@ -230,7 +232,7 @@ fun BoxEditScreen(
                     }
                     Column {
                         Text(
-                            text = "Immutable QR Payload (Safe to Rename/Move Box)",
+                            text = stringResource(R.string.box_edit_immutable_qr_title),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -252,18 +254,18 @@ fun BoxEditScreen(
                 OutlinedTextField(
                     value = uiState.shortCode,
                     onValueChange = viewModel::onShortCodeChange,
-                    label = { Text("Box Short Code *") },
-                    placeholder = { Text("BOX-001") },
+                    label = { Text(stringResource(R.string.box_edit_short_code_label)) },
+                    placeholder = { Text(stringResource(R.string.box_edit_short_code_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.weight(1f)
                 )
                 AssistChip(
                     onClick = viewModel::regenerateShortCode,
-                    label = { Text("Auto Code") },
+                    label = { Text(stringResource(R.string.box_edit_auto_code)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "Auto-generate next code",
+                            contentDescription = stringResource(R.string.box_edit_auto_code_desc),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -274,8 +276,8 @@ fun BoxEditScreen(
             OutlinedTextField(
                 value = uiState.name,
                 onValueChange = viewModel::onNameChange,
-                label = { Text("Box Name *") },
-                placeholder = { Text("e.g., Power Tools & Drill Bits") },
+                label = { Text(stringResource(R.string.box_edit_name_label)) },
+                placeholder = { Text(stringResource(R.string.box_edit_name_placeholder)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -288,7 +290,7 @@ fun BoxEditScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Assigned Room / Area",
+                        text = stringResource(R.string.box_edit_room_section),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -301,7 +303,7 @@ fun BoxEditScreen(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("+ New Room")
+                        Text(stringResource(R.string.box_edit_new_room_btn))
                     }
                 }
 
@@ -313,7 +315,7 @@ fun BoxEditScreen(
                         FilterChip(
                             selected = uiState.roomId == null,
                             onClick = { viewModel.onRoomSelected(null) },
-                            label = { Text("None (Unassigned)") },
+                            label = { Text(stringResource(R.string.box_edit_room_unassigned)) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.MeetingRoom,
@@ -348,8 +350,8 @@ fun BoxEditScreen(
                 OutlinedTextField(
                     value = uiState.location,
                     onValueChange = viewModel::onLocationChange,
-                    label = { Text("Storage Location / Shelf (within Room)") },
-                    placeholder = { Text("e.g., Garage Rack B, Shelf 2") },
+                    label = { Text(stringResource(R.string.box_edit_location_label)) },
+                    placeholder = { Text(stringResource(R.string.box_edit_location_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -374,7 +376,7 @@ fun BoxEditScreen(
                 OutlinedTextField(
                     value = uiState.category,
                     onValueChange = viewModel::onCategoryChange,
-                    label = { Text("Category") },
+                    label = { Text(stringResource(R.string.box_edit_category_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -395,7 +397,7 @@ fun BoxEditScreen(
             // Color Picker
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Color Tag",
+                    text = stringResource(R.string.box_edit_color_tag),
                     style = MaterialTheme.typography.titleMedium
                 )
                 LazyRow(
@@ -436,8 +438,8 @@ fun BoxEditScreen(
             OutlinedTextField(
                 value = uiState.notes,
                 onValueChange = viewModel::onNotesChange,
-                label = { Text("Notes (Optional)") },
-                placeholder = { Text("Heavy bin, fragile contents, seasonal notes...") },
+                label = { Text(stringResource(R.string.box_edit_notes_label)) },
+                placeholder = { Text(stringResource(R.string.box_edit_notes_placeholder)) },
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -454,7 +456,11 @@ fun BoxEditScreen(
                 Icon(imageVector = Icons.Default.Save, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (uiState.isEditMode) "Save Changes" else "Create Box",
+                    text = if (uiState.isEditMode) {
+                        stringResource(R.string.box_edit_save_changes)
+                    } else {
+                        stringResource(R.string.box_edit_create_box)
+                    },
                     style = MaterialTheme.typography.titleMedium
                 )
             }
@@ -476,18 +482,21 @@ fun BoxEditScreen(
 fun QuickCreateRoomDialog(
     initialName: String = "",
     initialColorHex: String = "#3B82F6",
-    title: String = "Create New Room",
-    confirmButtonText: String = "Create Room",
+    title: String? = null,
+    confirmButtonText: String? = null,
     onDismiss: () -> Unit,
     onCreateRoom: (name: String, colorHex: String) -> Unit
 ) {
     var roomName by remember { mutableStateOf(initialName) }
     var selectedColorHex by remember { mutableStateOf(initialColorHex) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val resolvedTitle = title ?: stringResource(R.string.room_create_title_default)
+    val resolvedConfirm = confirmButtonText ?: stringResource(R.string.room_create_btn_default)
+    val requiredError = stringResource(R.string.room_create_error_required)
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold) },
+        title = { Text(resolvedTitle, fontWeight = FontWeight.Bold) },
         text = {
             Column(
                 modifier = Modifier
@@ -502,8 +511,8 @@ fun QuickCreateRoomDialog(
                         roomName = it
                         errorMessage = null
                     },
-                    label = { Text("Room / Area Name *") },
-                    placeholder = { Text("e.g., Garage, Attic, Living Room") },
+                    label = { Text(stringResource(R.string.room_create_name_label)) },
+                    placeholder = { Text(stringResource(R.string.room_create_name_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -517,7 +526,7 @@ fun QuickCreateRoomDialog(
                 }
 
                 Text(
-                    text = "Room Color Accent",
+                    text = stringResource(R.string.room_create_color_accent),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -558,18 +567,18 @@ fun QuickCreateRoomDialog(
                 onClick = {
                     val trimmed = roomName.trim()
                     if (trimmed.isEmpty()) {
-                        errorMessage = "Room name is required."
+                        errorMessage = requiredError
                     } else {
                         onCreateRoom(trimmed, selectedColorHex)
                     }
                 }
             ) {
-                Text(confirmButtonText)
+                Text(resolvedConfirm)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         }
     )

@@ -49,14 +49,33 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.boxvault.app.R
 import com.boxvault.app.util.pdf.PdfPageSize
 import com.boxvault.app.util.pdf.QrGridPreset
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+private fun QrGridPreset.titleRes(): Int = when (this) {
+    QrGridPreset.LARGE_2X4 -> R.string.pdf_preset_large_title
+    QrGridPreset.MEDIUM_3X7 -> R.string.pdf_preset_medium_title
+    QrGridPreset.SMALL_4X10 -> R.string.pdf_preset_small_title
+}
+
+private fun QrGridPreset.subtitleRes(): Int = when (this) {
+    QrGridPreset.LARGE_2X4 -> R.string.pdf_preset_large_desc
+    QrGridPreset.MEDIUM_3X7 -> R.string.pdf_preset_medium_desc
+    QrGridPreset.SMALL_4X10 -> R.string.pdf_preset_small_desc
+}
+
+private fun PdfPageSize.displayNameRes(): Int = when (this) {
+    PdfPageSize.A4 -> R.string.pdf_page_size_a4
+    PdfPageSize.US_LETTER -> R.string.pdf_page_size_us_letter
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,11 +105,16 @@ fun PdfGeneratorScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Printable QR Label Sheets",
+                            text = stringResource(R.string.pdf_title),
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "${uiState.activeLabelSpecs.size} labels • ${uiState.estimatedPageCount} page(s) (${uiState.pageSize.name})",
+                            text = stringResource(
+                                R.string.pdf_subtitle,
+                                uiState.activeLabelSpecs.size,
+                                uiState.estimatedPageCount,
+                                uiState.pageSize.name
+                            ),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -100,7 +124,7 @@ fun PdfGeneratorScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.common_back)
                         )
                     }
                 },
@@ -119,7 +143,7 @@ fun PdfGeneratorScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Save PDF")
+                        Text(stringResource(R.string.pdf_save_btn))
                     }
                 }
             )
@@ -185,7 +209,7 @@ fun PdfGeneratorScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = "1. Label Generation Mode",
+                            text = stringResource(R.string.pdf_section_mode),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -197,19 +221,19 @@ fun PdfGeneratorScreen(
                             FilterChip(
                                 selected = uiState.sourceMode == PdfLabelSourceMode.EXISTING_BOXES,
                                 onClick = { viewModel.onSourceModeChange(PdfLabelSourceMode.EXISTING_BOXES) },
-                                label = { Text("Existing Boxes (${uiState.allBoxes.size})") }
+                                label = { Text(stringResource(R.string.pdf_mode_existing_boxes, uiState.allBoxes.size)) }
                             )
                             FilterChip(
                                 selected = uiState.sourceMode == PdfLabelSourceMode.PRE_ALLOCATED_BLANK_LABELS,
                                 onClick = { viewModel.onSourceModeChange(PdfLabelSourceMode.PRE_ALLOCATED_BLANK_LABELS) },
-                                label = { Text("Pre-Allocated Blank Stickers") }
+                                label = { Text(stringResource(R.string.pdf_mode_blank_stickers)) }
                             )
                         }
                         Text(
                             text = if (uiState.sourceMode == PdfLabelSourceMode.EXISTING_BOXES) {
-                                "Print QR labels for boxes already cataloged in your local database."
+                                stringResource(R.string.pdf_mode_existing_desc)
                             } else {
-                                "Print a sheet of unassigned QR labels with write-in lines now. When you stick one on a box later and scan it, BoxVault automatically opens New Box setup with that exact QR UUID."
+                                stringResource(R.string.pdf_mode_blank_desc)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -234,7 +258,7 @@ fun PdfGeneratorScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = "2. Sheet Layout & Grid Preset",
+                            text = stringResource(R.string.pdf_section_layout),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -255,12 +279,12 @@ fun PdfGeneratorScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
                                     Text(
-                                        text = preset.title,
+                                        text = stringResource(preset.titleRes()),
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = preset.subtitle,
+                                        text = stringResource(preset.subtitleRes()),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -274,14 +298,14 @@ fun PdfGeneratorScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Paper Size:",
+                                text = stringResource(R.string.pdf_paper_size_label),
                                 style = MaterialTheme.typography.labelLarge
                             )
                             PdfPageSize.entries.forEach { pageSize ->
                                 FilterChip(
                                     selected = uiState.pageSize == pageSize,
                                     onClick = { viewModel.onPageSizeChange(pageSize) },
-                                    label = { Text(pageSize.displayName) }
+                                    label = { Text(stringResource(pageSize.displayNameRes())) }
                                 )
                             }
                         }
@@ -293,12 +317,12 @@ fun PdfGeneratorScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Dashed Cut Guides",
+                                    text = stringResource(R.string.pdf_cut_guides_title),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = "Crisp nearest-neighbor QR rendering + white quiet zone always enabled",
+                                    text = stringResource(R.string.pdf_cut_guides_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -334,14 +358,14 @@ fun PdfGeneratorScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "3. Pre-Allocated Blank Sheet Quantity",
+                                    text = stringResource(R.string.pdf_section_blank_qty),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 AssistChip(
                                     onClick = viewModel::regenerateBlankLabelUuids,
-                                    label = { Text("New UUIDs") },
+                                    label = { Text(stringResource(R.string.pdf_new_uuids_btn)) },
                                     leadingIcon = {
                                         Icon(
                                             imageVector = Icons.Default.Refresh,
@@ -360,7 +384,7 @@ fun PdfGeneratorScreen(
                                         onClick = { viewModel.onBlankLabelCountChange(countOption) },
                                         label = {
                                              val pages = countOption / perPage
-                                            Text("$countOption labels ($pages pg)")
+                                            Text(stringResource(R.string.pdf_blank_count_option, countOption, pages))
                                         }
                                     )
                                 }
@@ -369,7 +393,12 @@ fun PdfGeneratorScreen(
                             val firstCode = uiState.preallocatedBlankSpecs.firstOrNull()?.shortCode ?: "BOX-001"
                             val lastCode = uiState.preallocatedBlankSpecs.lastOrNull()?.shortCode ?: firstCode
                             Text(
-                                text = "Pre-allocated range: $firstCode → $lastCode (${uiState.preallocatedBlankSpecs.size} unique boxvault://box/<uuid> labels)",
+                                text = stringResource(
+                                    R.string.pdf_blank_range_desc,
+                                    firstCode,
+                                    lastCode,
+                                    uiState.preallocatedBlankSpecs.size
+                                ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.secondary
                             )
@@ -384,7 +413,11 @@ fun PdfGeneratorScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "3. Select Boxes to Print (${uiState.selectedBoxIds.size}/${uiState.allBoxes.size})",
+                            text = stringResource(
+                                R.string.pdf_section_select_boxes,
+                                uiState.selectedBoxIds.size,
+                                uiState.allBoxes.size
+                            ),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -397,7 +430,7 @@ fun PdfGeneratorScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("All")
+                                Text(stringResource(R.string.pdf_select_all))
                             }
                             TextButton(onClick = viewModel::clearBoxSelection) {
                                 Icon(
@@ -406,7 +439,7 @@ fun PdfGeneratorScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("None")
+                                Text(stringResource(R.string.pdf_select_none))
                             }
                         }
                     }
@@ -428,7 +461,7 @@ fun PdfGeneratorScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    text = "No boxes in database yet.",
+                                    text = stringResource(R.string.pdf_no_boxes),
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 OutlinedButton(
@@ -436,7 +469,7 @@ fun PdfGeneratorScreen(
                                         viewModel.onSourceModeChange(PdfLabelSourceMode.PRE_ALLOCATED_BLANK_LABELS)
                                     }
                                 ) {
-                                    Text("Switch to Pre-Allocated Blank Labels")
+                                    Text(stringResource(R.string.pdf_switch_to_blank))
                                 }
                             }
                         }
@@ -478,7 +511,7 @@ fun PdfGeneratorScreen(
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = box.location.ifBlank { "No location set" },
+                                        text = box.location.ifBlank { stringResource(R.string.pdf_no_location) },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -504,7 +537,7 @@ fun PdfGeneratorScreen(
                     Icon(imageVector = Icons.Default.Print, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Export Printable PDF (${uiState.activeLabelSpecs.size} Labels)",
+                        text = stringResource(R.string.pdf_export_btn, uiState.activeLabelSpecs.size),
                         style = MaterialTheme.typography.titleMedium
                     )
                 }

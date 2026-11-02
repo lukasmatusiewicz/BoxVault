@@ -58,10 +58,12 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.boxvault.app.data.preferences.UserPreferencesManager
 import com.boxvault.app.util.sensory.SensoryFeedbackManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import com.boxvault.app.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.data.local.entity.ItemEntity
 
@@ -123,14 +125,14 @@ fun BulkEntryScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
-                                text = "Fast Bulk Entry • ${uiState.box?.shortCode ?: ""}",
+                                text = stringResource(R.string.bulk_entry_title, uiState.box?.shortCode ?: ""),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.ExtraBold
                             )
                         }
                         Text(
-                            text = "${uiState.box?.name ?: "Box"} (${uiState.totalBoxQuantity} items total)",
+                            text = stringResource(R.string.bulk_entry_subtitle, uiState.box?.name ?: "Box", uiState.totalBoxQuantity),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -139,7 +141,7 @@ fun BulkEntryScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Done"
+                            contentDescription = stringResource(R.string.common_done)
                         )
                     }
                 },
@@ -154,7 +156,7 @@ fun BulkEntryScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Done")
+                        Text(stringResource(R.string.common_done))
                     }
                 }
             )
@@ -195,8 +197,8 @@ fun BulkEntryScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .focusRequester(focusRequester),
-                            label = { Text("Type item name & press Next / Enter") },
-                            placeholder = { Text("e.g., Cordless Impact Driver") },
+                            label = { Text(stringResource(R.string.bulk_entry_input_label)) },
+                            placeholder = { Text(stringResource(R.string.bulk_entry_input_placeholder)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.Words,
@@ -217,10 +219,10 @@ fun BulkEntryScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
-                                contentDescription = "Add Item"
+                                contentDescription = stringResource(R.string.bulk_entry_add_item_desc)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Add")
+                            Text(stringResource(R.string.bulk_entry_add_btn))
                         }
                     }
 
@@ -235,7 +237,7 @@ fun BulkEntryScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "Qty:",
+                                text = stringResource(R.string.bulk_entry_qty_label),
                                 style = MaterialTheme.typography.labelLarge
                             )
                             FilledIconButton(
@@ -252,7 +254,7 @@ fun BulkEntryScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Remove,
-                                    contentDescription = "Decrease quantity",
+                                    contentDescription = stringResource(R.string.box_detail_decrease_qty),
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -276,7 +278,7 @@ fun BulkEntryScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
-                                    contentDescription = "Increase quantity",
+                                    contentDescription = stringResource(R.string.box_detail_increase_qty),
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -324,7 +326,7 @@ fun BulkEntryScreen(
 
                         AssistChip(
                             onClick = { viewModel.toggleNotesField() },
-                            label = { Text("Note") },
+                            label = { Text(stringResource(R.string.bulk_entry_note_chip)) },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.Notes,
@@ -339,7 +341,7 @@ fun BulkEntryScreen(
                         OutlinedTextField(
                             value = uiState.notesInput,
                             onValueChange = viewModel::onNotesChange,
-                            label = { Text("Optional item note (resets after each add)") },
+                            label = { Text(stringResource(R.string.bulk_entry_note_label)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(
@@ -360,13 +362,13 @@ fun BulkEntryScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "ADDED THIS SESSION (${uiState.sessionAddedItems.size})",
+                    text = stringResource(R.string.bulk_entry_session_header, uiState.sessionAddedItems.size),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.secondary
                 )
                 if (uiState.lastAddedItemName != null) {
                     Text(
-                        text = "Last saved: ${uiState.lastAddedItemName}",
+                        text = stringResource(R.string.bulk_entry_last_saved, uiState.lastAddedItemName ?: ""),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -388,7 +390,7 @@ fun BulkEntryScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "Type an item name above and hit Next/Enter on your keyboard. The keyboard stays open so you can add dozens of items in seconds.",
+                                text = stringResource(R.string.bulk_entry_empty_hint),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(16.dp)
@@ -449,7 +451,7 @@ private fun SessionAddedItemRow(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Qty: ${item.quantity} • ${item.category}",
+                    text = stringResource(R.string.bulk_entry_item_qty_cat, item.quantity, item.category),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -461,17 +463,17 @@ private fun SessionAddedItemRow(
             ) {
                 AssistChip(
                     onClick = onBumpQuantity,
-                    label = { Text("+1") }
+                    label = { Text(stringResource(R.string.bulk_entry_bump_qty)) }
                 )
                 TextButton(onClick = onUndo) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Undo,
-                        contentDescription = "Undo item",
+                        contentDescription = stringResource(R.string.bulk_entry_undo_desc),
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.error
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Undo", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.bulk_entry_undo_btn), color = MaterialTheme.colorScheme.error)
                 }
             }
         }

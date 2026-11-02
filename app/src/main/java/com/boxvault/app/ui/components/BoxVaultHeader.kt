@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -42,7 +43,7 @@ fun BoxVaultHeader(
                 if (onHeaderClick != null) {
                     Modifier.clickable(
                         role = Role.Button,
-                        onClickLabel = "Return to Dashboard",
+                        onClickLabel = stringResource(R.string.header_return_dashboard),
                         onClick = onHeaderClick
                     )
                 } else Modifier
@@ -59,7 +60,7 @@ fun BoxVaultHeader(
         ) {
             Image(
                 painter = painterResource(id = R.drawable.ic_boxvault_logo),
-                contentDescription = "BoxVault Logo",
+                contentDescription = stringResource(R.string.header_logo_content_description),
                 modifier = Modifier.size(34.dp)
             )
 
@@ -73,7 +74,7 @@ fun BoxVaultHeader(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "BoxVault",
+                        text = stringResource(R.string.app_name),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.ExtraBold
@@ -88,7 +89,7 @@ fun BoxVaultHeader(
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Text(
-                                text = "TAP FOR DASHBOARD",
+                                text = stringResource(R.string.header_tap_for_dashboard),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontWeight = FontWeight.Bold,
@@ -99,7 +100,7 @@ fun BoxVaultHeader(
                 }
 
                 Text(
-                    text = "100% local offline storage catalog",
+                    text = stringResource(R.string.header_tagline),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,

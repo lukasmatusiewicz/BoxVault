@@ -22,12 +22,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.boxvault.app.R
 
 @Composable
 fun PhotoSourceSelectionDialog(
-    title: String = "Select Photo Source",
+    title: String = stringResource(R.string.photo_source_dialog_title),
     hasExistingPhoto: Boolean,
     onDismiss: () -> Unit,
     onTakePhoto: () -> Unit,
@@ -73,12 +75,12 @@ fun PhotoSourceSelectionDialog(
                         )
                         Column {
                             Text(
-                                text = "Take Photo",
+                                text = stringResource(R.string.photo_source_take_photo),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Capture new photo with camera",
+                                text = stringResource(R.string.photo_source_take_photo_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -109,12 +111,12 @@ fun PhotoSourceSelectionDialog(
                         )
                         Column {
                             Text(
-                                text = "Choose from Gallery",
+                                text = stringResource(R.string.photo_source_gallery),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Select photo from local device storage",
+                                text = stringResource(R.string.photo_source_gallery_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -146,13 +148,13 @@ fun PhotoSourceSelectionDialog(
                             )
                             Column {
                                 Text(
-                                    text = "Remove Photo",
+                                    text = stringResource(R.string.photo_source_remove),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.error
                                 )
                                 Text(
-                                    text = "Detach photo from this entry",
+                                    text = stringResource(R.string.photo_source_remove_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
                                 )
@@ -165,7 +167,7 @@ fun PhotoSourceSelectionDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         }
     )

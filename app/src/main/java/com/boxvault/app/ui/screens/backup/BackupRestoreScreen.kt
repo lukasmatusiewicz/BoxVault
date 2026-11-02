@@ -48,9 +48,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.boxvault.app.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -93,11 +95,11 @@ fun BackupRestoreScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Local ZIP Backup & Restore",
+                            text = stringResource(R.string.backup_title),
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "100% Offline SAF Archive • SHA-256 & Zip-Slip Protected",
+                            text = stringResource(R.string.backup_subtitle),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.secondary
                         )
@@ -107,7 +109,7 @@ fun BackupRestoreScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.common_back)
                         )
                     }
                 }
@@ -132,7 +134,7 @@ fun BackupRestoreScreen(
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Processing archive in isolated staging directory...",
+                        text = stringResource(R.string.backup_processing_staging),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -185,18 +187,23 @@ fun BackupRestoreScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Current On-Device Vault Inventory",
+                        text = stringResource(R.string.backup_inventory_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "${uiState.liveBoxCount} Boxes • ${uiState.liveDistinctItemCount} Unique Items (${uiState.liveTotalItemQuantity} Total Qty)",
+                        text = stringResource(
+                            R.string.backup_inventory_counts,
+                            uiState.liveBoxCount,
+                            uiState.liveDistinctItemCount,
+                            uiState.liveTotalItemQuantity
+                        ),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        text = "All photos are downsampled to max 1600px (80% JPEG) with normalized EXIF orientation for compact archives.",
+                        text = stringResource(R.string.backup_inventory_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -229,12 +236,12 @@ fun BackupRestoreScreen(
                         )
                         Column {
                             Text(
-                                text = "Export Portable .ZIP Backup",
+                                text = stringResource(R.string.backup_export_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Includes backup_manifest.json + all photos with SHA-256 checksums",
+                                text = stringResource(R.string.backup_export_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -254,7 +261,7 @@ fun BackupRestoreScreen(
                     ) {
                         Icon(imageVector = Icons.Default.Archive, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Export .ZIP Archive via SAF")
+                        Text(stringResource(R.string.backup_export_btn))
                     }
                 }
             }
@@ -285,12 +292,12 @@ fun BackupRestoreScreen(
                         )
                         Column {
                             Text(
-                                text = "Restore from Local .ZIP Archive",
+                                text = stringResource(R.string.backup_restore_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Extracts & verifies inside cacheDir/restore_staging before touching live data",
+                                text = stringResource(R.string.backup_restore_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -311,7 +318,7 @@ fun BackupRestoreScreen(
                     ) {
                         Icon(imageVector = Icons.Default.Restore, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Select .ZIP Backup to Restore")
+                        Text(stringResource(R.string.backup_restore_btn))
                     }
                 }
             }
@@ -331,25 +338,25 @@ fun BackupRestoreScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Cryptographic & Archive Security Guarantees",
+                        text = stringResource(R.string.backup_security_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     SecurityBulletRow(
                         icon = Icons.Default.Security,
-                        title = "Strict Zip-Slip Path Traversal Defense",
-                        description = "Every ZipEntry is canonically validated inside cacheDir/restore_staging. Entries containing '..' or escaping the staging root throw SecurityException."
+                        title = stringResource(R.string.backup_sec_zipslip_title),
+                        description = stringResource(R.string.backup_sec_zipslip_desc)
                     )
                     SecurityBulletRow(
                         icon = Icons.Default.VerifiedUser,
-                        title = "Atomic Staged SHA-256 Verification",
-                        description = "Every staged photo is hashed with SHA-256 and verified against backup_manifest.json before any live Room row or photo file is overwritten."
+                        title = stringResource(R.string.backup_sec_sha_title),
+                        description = stringResource(R.string.backup_sec_sha_desc)
                     )
                     SecurityBulletRow(
                         icon = Icons.Default.CloudOff,
-                        title = "Zero Cloud / Zero Network Permissions",
-                        description = "android:allowBackup=\"false\" and tools:node=\"remove\" on INTERNET ensure backups only move where you explicitly save them via Android SAF."
+                        title = stringResource(R.string.backup_sec_cloud_title),
+                        description = stringResource(R.string.backup_sec_cloud_desc)
                     )
                 }
             }
@@ -359,11 +366,11 @@ fun BackupRestoreScreen(
     if (pendingRestoreUri != null) {
         AlertDialog(
             onDismissRequest = { pendingRestoreUri = null },
-            title = { Text("Restore Backup Archive?") },
+            title = { Text(stringResource(R.string.backup_dialog_title)) },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text(
-                        "BoxVault will first extract and verify all SHA-256 photo checksums inside an isolated staging folder. Only if 100% of integrity checks pass will your current on-device inventory be replaced."
+                        stringResource(R.string.backup_dialog_message)
                     )
                 }
             },
@@ -382,12 +389,12 @@ fun BackupRestoreScreen(
                         }
                     }
                 ) {
-                    Text("Verify & Restore")
+                    Text(stringResource(R.string.backup_dialog_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { pendingRestoreUri = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )

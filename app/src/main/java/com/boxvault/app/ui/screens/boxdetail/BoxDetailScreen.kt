@@ -77,9 +77,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.boxvault.app.data.preferences.UserPreferencesManager
 import com.boxvault.app.util.sensory.SensoryFeedbackManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.boxvault.app.R
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.data.local.entity.BoxEntity
@@ -126,7 +128,8 @@ fun BoxDetailScreen(
 
     // Unified Photo Source Selection Dialog state
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
-    var photoSourceTitle by remember { mutableStateOf("Select Photo Source") }
+    val defaultPhotoSourceTitle = stringResource(R.string.photo_source_dialog_title)
+    var photoSourceTitle by remember { mutableStateOf("") }
     var photoSourceTargetItemId by remember { mutableStateOf<String?>(null) }
     var photoSourceHasExistingPhoto by remember { mutableStateOf(false) }
     var photoSourceOnRemovePhoto by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -195,7 +198,7 @@ fun BoxDetailScreen(
 
     val openBoxPhotoSelection = {
         photoSourceTargetItemId = null
-        photoSourceTitle = "Select Box Photo"
+        photoSourceTitle = context.getString(R.string.box_detail_select_box_photo)
         val firstPhoto = uiState.boxLevelPhotos.firstOrNull()
         photoSourceHasExistingPhoto = firstPhoto != null
         photoSourceOnRemovePhoto = firstPhoto?.let { p -> { viewModel.deletePhoto(p.id) } }
@@ -205,7 +208,7 @@ fun BoxDetailScreen(
     val openItemPhotoSelection: (ItemWithPhotos) -> Unit = { itemWithPhotos ->
         val firstPhoto = itemWithPhotos.photos.firstOrNull()
         photoSourceTargetItemId = itemWithPhotos.item.id
-        photoSourceTitle = "Select Photo for ${itemWithPhotos.item.name}"
+        photoSourceTitle = context.getString(R.string.box_detail_select_photo_for_item, itemWithPhotos.item.name)
         photoSourceHasExistingPhoto = firstPhoto != null
         photoSourceOnRemovePhoto = firstPhoto?.let { p -> { viewModel.deletePhoto(p.id) } }
         showPhotoSourceDialog = true
@@ -218,7 +221,7 @@ fun BoxDetailScreen(
                 ?.photos.orEmpty()
             val firstPhoto = existingPhotos.firstOrNull()
             photoSourceTargetItemId = itemBeingEdited?.id
-            photoSourceTitle = "Item Photo"
+            photoSourceTitle = context.getString(R.string.box_detail_item_photo)
             photoSourceHasExistingPhoto = firstPhoto != null || draftItemPhotoBytes != null
             photoSourceOnRemovePhoto = {
                 draftItemPhotoBitmap = null
@@ -228,7 +231,7 @@ fun BoxDetailScreen(
             showPhotoSourceDialog = true
         } else {
             photoSourceTargetItemId = DRAFT_ITEM_PHOTO_TARGET
-            photoSourceTitle = "Item Photo"
+            photoSourceTitle = context.getString(R.string.box_detail_item_photo)
             photoSourceHasExistingPhoto = draftItemPhotoBytes != null
             photoSourceOnRemovePhoto = {
                 draftItemPhotoBitmap = null
@@ -246,12 +249,12 @@ fun BoxDetailScreen(
                 title = {
                     Column {
                         Text(
-                            text = box?.shortCode ?: "Box Detail",
+                            text = box?.shortCode ?: stringResource(R.string.box_detail_title_fallback),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = box?.name ?: "Loading...",
+                            text = box?.name ?: stringResource(R.string.box_detail_loading),
                             style = MaterialTheme.typography.titleLarge,
                             maxLines = 1
                         )
@@ -261,7 +264,7 @@ fun BoxDetailScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.common_back)
                         )
                     }
                 },
@@ -270,25 +273,25 @@ fun BoxDetailScreen(
                         IconButton(onClick = { showQrPreviewDialog = true }) {
                             Icon(
                                 imageVector = Icons.Default.QrCode2,
-                                contentDescription = "View QR Code"
+                                contentDescription = stringResource(R.string.box_detail_view_qr)
                             )
                         }
                         IconButton(onClick = { onNavigateToPrintQr(box.id) }) {
                             Icon(
                                 imageVector = Icons.Default.Print,
-                                contentDescription = "Print QR Label"
+                                contentDescription = stringResource(R.string.box_detail_print_qr)
                             )
                         }
                         IconButton(onClick = { onNavigateToEditBox(box.id) }) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit Box"
+                                contentDescription = stringResource(R.string.box_detail_edit_box)
                             )
                         }
                         IconButton(onClick = { showDeleteBoxConfirm = true }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete Box",
+                                contentDescription = stringResource(R.string.box_detail_delete_box),
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
@@ -305,7 +308,7 @@ fun BoxDetailScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Box not found.",
+                    text = stringResource(R.string.box_detail_not_found),
                     style = MaterialTheme.typography.titleLarge
                 )
             }
@@ -369,7 +372,7 @@ fun BoxDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "ITEMS IN BOX (${uiState.totalQuantity} total)",
+                                text = stringResource(R.string.box_detail_items_in_box_header, uiState.totalQuantity),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -380,7 +383,7 @@ fun BoxDetailScreen(
                                     draftItemPhotoBytes = null
                                     showAddOrEditItemDialog = true
                                 },
-                                label = { Text("Add 1 Item") },
+                                label = { Text(stringResource(R.string.box_detail_add_single_item)) },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Default.Add,
@@ -395,7 +398,7 @@ fun BoxDetailScreen(
                             OutlinedTextField(
                                 value = uiState.itemFilterQuery,
                                 onValueChange = viewModel::onItemFilterQueryChange,
-                                placeholder = { Text("Filter items inside ${box.shortCode}...") },
+                                placeholder = { Text(stringResource(R.string.box_detail_filter_items_placeholder, box.shortCode)) },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = Icons.Default.Search,
@@ -427,9 +430,9 @@ fun BoxDetailScreen(
                             ) {
                                 Text(
                                     text = if (uiState.itemsWithPhotos.isEmpty()) {
-                                        "This box is currently empty"
+                                        stringResource(R.string.box_detail_empty_box)
                                     } else {
-                                        "No items match \"${uiState.itemFilterQuery}\""
+                                        stringResource(R.string.box_detail_no_items_match, uiState.itemFilterQuery)
                                     },
                                     style = MaterialTheme.typography.titleMedium
                                 )
@@ -437,7 +440,7 @@ fun BoxDetailScreen(
                                     Button(onClick = { onNavigateToBulkEntry(box.id) }) {
                                         Icon(imageVector = Icons.Default.Bolt, contentDescription = null)
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Start Fast Bulk Entry")
+                                        Text(stringResource(R.string.box_detail_start_fast_bulk))
                                     }
                                 }
                             }
@@ -523,7 +526,7 @@ fun BoxDetailScreen(
 
     if (showPhotoSourceDialog) {
         PhotoSourceSelectionDialog(
-            title = photoSourceTitle,
+            title = if (photoSourceTitle.isBlank()) defaultPhotoSourceTitle else photoSourceTitle,
             hasExistingPhoto = photoSourceHasExistingPhoto,
             onDismiss = { showPhotoSourceDialog = false },
             onTakePhoto = {
@@ -540,12 +543,10 @@ fun BoxDetailScreen(
     if (showCameraRationaleDialog) {
         AlertDialog(
             onDismissRequest = { showCameraRationaleDialog = false },
-            title = { Text("Camera Permission Required") },
+            title = { Text(stringResource(R.string.box_detail_camera_perm_title)) },
             text = {
                 Text(
-                    "BoxVault requires camera access to capture photos of your boxes and items locally. " +
-                        "Camera frames are processed entirely on your device and are never shared.\n\n" +
-                        "You can also choose an existing photo from your local gallery instead."
+                    stringResource(R.string.box_detail_camera_perm_desc)
                 )
             },
             confirmButton = {
@@ -562,12 +563,12 @@ fun BoxDetailScreen(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Choose from Gallery")
+                    Text(stringResource(R.string.box_detail_camera_perm_gallery))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCameraRationaleDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -587,10 +588,10 @@ fun BoxDetailScreen(
     if (showDeleteBoxConfirm && box != null) {
         AlertDialog(
             onDismissRequest = { showDeleteBoxConfirm = false },
-            title = { Text("Delete ${box.shortCode} (${box.name})?") },
+            title = { Text(stringResource(R.string.box_detail_delete_box_title, box.shortCode, box.name)) },
             text = {
                 Text(
-                    "This will permanently delete this box, all ${uiState.distinctItemCount} item entries inside it, and any attached local photos."
+                    stringResource(R.string.box_detail_delete_box_message, uiState.distinctItemCount)
                 )
             },
             confirmButton = {
@@ -604,12 +605,12 @@ fun BoxDetailScreen(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Delete Box")
+                    Text(stringResource(R.string.box_detail_delete_box_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteBoxConfirm = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -698,7 +699,7 @@ private fun BoxHeaderCard(
                 PhotoSlotCard(
                     photoRelativePath = primaryPhoto?.relativePath,
                     photoStorageManager = photoStorageManager,
-                    label = if (primaryPhoto == null) "Add Box Photo" else box.name,
+                    label = if (primaryPhoto == null) stringResource(R.string.box_detail_add_box_photo) else box.name,
                     size = 80.dp,
                     onClick = onPhotoSlotClick
                 )
@@ -730,7 +731,7 @@ private fun BoxHeaderCard(
                             )
                         }
                         Text(
-                            text = "• $totalQuantity total qty ($distinctItemCount unique)",
+                            text = stringResource(R.string.box_detail_total_qty_unique, totalQuantity, distinctItemCount),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -764,7 +765,7 @@ private fun BoxHeaderCard(
                     if (qrBitmap != null) {
                         Image(
                             bitmap = qrBitmap.asImageBitmap(),
-                            contentDescription = "Tap to enlarge QR code",
+                            contentDescription = stringResource(R.string.box_detail_qr_tap_enlarge_cd),
                             filterQuality = FilterQuality.None,
                             modifier = Modifier
                                 .size(48.dp)
@@ -781,7 +782,7 @@ private fun BoxHeaderCard(
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Tap to Enlarge / Print QR Label",
+                            text = stringResource(R.string.box_detail_qr_tap_enlarge),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -839,7 +840,7 @@ private fun QrCodePreviewDialog(
                 if (qrBitmap != null) {
                     Image(
                         bitmap = qrBitmap.asImageBitmap(),
-                        contentDescription = "High-contrast QR code for ${box.shortCode}",
+                        contentDescription = stringResource(R.string.box_detail_qr_code_for, box.shortCode),
                         filterQuality = FilterQuality.None,
                         modifier = Modifier
                             .size(240.dp)
@@ -849,7 +850,7 @@ private fun QrCodePreviewDialog(
                     )
                 }
                 Text(
-                    text = "This QR code encodes the immutable box UUID. You can rename or move ${box.shortCode} at any time without ever re-printing this sticker.",
+                    text = stringResource(R.string.box_detail_qr_permanent_info, box.shortCode),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -863,12 +864,12 @@ private fun QrCodePreviewDialog(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Print on PDF Sheet")
+                Text(stringResource(R.string.box_detail_print_on_pdf))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(R.string.common_close))
             }
         }
     )
@@ -895,13 +896,13 @@ private fun FastBulkEntryLaunchCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Fast Bulk Item Entry Mode",
+                    text = stringResource(R.string.bulk_entry_fast_mode_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
-                    text = "Rapidly catalog items into $boxShortCode without the keyboard ever closing.",
+                    text = stringResource(R.string.bulk_entry_fast_mode_desc, boxShortCode),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                 )
@@ -920,7 +921,7 @@ private fun FastBulkEntryLaunchCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Bulk Add")
+                Text(stringResource(R.string.bulk_entry_bulk_add_btn))
             }
         }
     }
@@ -941,14 +942,14 @@ private fun BoxPhotosSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "BOX PHOTOS (${photos.size})",
+                text = stringResource(R.string.box_detail_box_photos_header, photos.size),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.secondary
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AssistChip(
                     onClick = onCapturePhoto,
-                    label = { Text("Camera") },
+                    label = { Text(stringResource(R.string.box_detail_photo_camera)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.AddAPhoto,
@@ -959,7 +960,7 @@ private fun BoxPhotosSection(
                 )
                 AssistChip(
                     onClick = onPickPhoto,
-                    label = { Text("Gallery") },
+                    label = { Text(stringResource(R.string.box_detail_photo_gallery)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Image,
@@ -1067,7 +1068,7 @@ private fun BoxItemRowCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Remove,
-                            contentDescription = "Decrease quantity",
+                            contentDescription = stringResource(R.string.box_detail_decrease_qty),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -1088,7 +1089,7 @@ private fun BoxItemRowCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Increase quantity",
+                            contentDescription = stringResource(R.string.box_detail_increase_qty),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -1125,7 +1126,13 @@ private fun BoxItemRowCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(if (itemWithPhotos.photos.isNotEmpty()) "Photo (${itemWithPhotos.photos.size})" else "Photo")
+                    Text(
+                        if (itemWithPhotos.photos.isNotEmpty()) {
+                            stringResource(R.string.box_detail_item_photo_count, itemWithPhotos.photos.size)
+                        } else {
+                            stringResource(R.string.box_detail_item_photo_btn)
+                        }
+                    )
                 }
                 TextButton(onClick = onEdit) {
                     Icon(
@@ -1134,7 +1141,7 @@ private fun BoxItemRowCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Edit")
+                    Text(stringResource(R.string.common_edit))
                 }
                 TextButton(onClick = onDelete) {
                     Icon(
@@ -1144,7 +1151,7 @@ private fun BoxItemRowCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Remove", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.common_remove), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -1172,7 +1179,7 @@ private fun ItemEditDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(if (initialItem == null) "Add Item to Box" else "Edit Item")
+            Text(if (initialItem == null) stringResource(R.string.box_detail_add_item_title) else stringResource(R.string.box_detail_edit_item_title))
         },
         text = {
             Column(
@@ -1192,7 +1199,7 @@ private fun ItemEditDialog(
                         photoStorageManager = photoStorageManager,
                         draftBitmap = draftBitmap,
                         size = 84.dp,
-                        label = "Item Photo",
+                        label = stringResource(R.string.box_detail_item_photo),
                         onClick = onPhotoSlotClick
                     )
                 }
@@ -1200,7 +1207,7 @@ private fun ItemEditDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Item Name *") },
+                    label = { Text(stringResource(R.string.box_detail_item_name_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1209,7 +1216,7 @@ private fun ItemEditDialog(
                     onValueChange = { input ->
                         quantityText = input.filter { it.isDigit() }
                     },
-                    label = { Text("Quantity") },
+                    label = { Text(stringResource(R.string.box_detail_item_qty_label)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -1217,14 +1224,14 @@ private fun ItemEditDialog(
                 OutlinedTextField(
                     value = category,
                     onValueChange = { category = it },
-                    label = { Text("Category") },
+                    label = { Text(stringResource(R.string.box_detail_item_cat_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Notes") },
+                    label = { Text(stringResource(R.string.box_detail_item_notes_label)) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -1237,12 +1244,12 @@ private fun ItemEditDialog(
                 },
                 enabled = name.trim().isNotEmpty()
             ) {
-                Text("Save")
+                Text(stringResource(R.string.common_save))
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         }
     )
