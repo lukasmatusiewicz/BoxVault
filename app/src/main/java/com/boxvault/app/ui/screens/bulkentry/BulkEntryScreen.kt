@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Notes
@@ -59,18 +61,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.data.local.entity.ItemEntity
 
+private val QuickQuantityPresets = listOf(1, 2, 5, 10)
 private val BulkQuickCategories = listOf(
     "General",
-    "Tools",
     "Hardware",
-    "Electronics",
-    "Kitchen",
-    "Winter Gear",
-    "Holiday",
-    "Camping"
+    "Tools",
+    "Cables",
+    "Decor",
+    "Winter",
+    "Safety",
+    "Office"
 )
-
-private val QuickQuantityPresets = listOf(1, 2, 3, 4, 5, 10)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -167,6 +168,7 @@ fun BulkEntryScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -361,7 +363,7 @@ fun BulkEntryScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 48.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (uiState.sessionAddedItems.isEmpty()) {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -127,8 +128,9 @@ fun PdfGeneratorScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
+                .padding(innerPadding)
+                .imePadding(),
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (uiState.statusMessage != null) {
@@ -357,7 +359,7 @@ fun PdfGeneratorScreen(
                                         selected = uiState.blankLabelCount == countOption,
                                         onClick = { viewModel.onBlankLabelCountChange(countOption) },
                                         label = {
-                                            val pages = countOption / perPage
+                                             val pages = countOption / perPage
                                             Text("$countOption labels ($pages pg)")
                                         }
                                     )
@@ -510,4 +512,3 @@ fun PdfGeneratorScreen(
         }
     }
 }
-
