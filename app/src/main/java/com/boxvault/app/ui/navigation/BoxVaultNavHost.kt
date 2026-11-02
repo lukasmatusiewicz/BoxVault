@@ -1,6 +1,9 @@
 package com.boxvault.app.ui.navigation
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -9,12 +12,14 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.boxvault.app.data.backup.BackupManager
 import com.boxvault.app.data.preferences.UserPreferencesManager
 import com.boxvault.app.data.repository.BoxVaultRepository
 import com.boxvault.app.data.storage.PhotoStorageManager
+import com.boxvault.app.ui.components.BoxVaultHeader
 import com.boxvault.app.ui.screens.backup.BackupRestoreScreen
 import com.boxvault.app.ui.screens.backup.BackupRestoreViewModel
 import com.boxvault.app.ui.screens.boxdetail.BoxDetailScreen
@@ -54,11 +59,28 @@ fun BoxVaultNavHost(
         userPreferencesManager ?: UserPreferencesManager(context)
     }
 
-    NavHost(
-        navController = navController,
-        startDestination = BoxVaultDestinations.DASHBOARD_ROUTE,
-        modifier = modifier
-    ) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val isDashboard = currentRoute == BoxVaultDestinations.DASHBOARD_ROUTE
+
+    Column(modifier = modifier.fillMaxSize()) {
+        BoxVaultHeader(
+            onHeaderClick = if (!isDashboard) {
+                {
+                    navController.navigate(BoxVaultDestinations.DASHBOARD_ROUTE) {
+                        popUpTo(BoxVaultDestinations.DASHBOARD_ROUTE) {
+                            inclusive = false
+                        }
+                    }
+                }
+            } else null
+        )
+
+        NavHost(
+            navController = navController,
+            startDestination = BoxVaultDestinations.DASHBOARD_ROUTE,
+            modifier = Modifier.weight(1f)
+        ) {
         composable(route = BoxVaultDestinations.DASHBOARD_ROUTE) {
             val dashboardViewModel: DashboardViewModel = viewModel(
                 factory = DashboardViewModel.Factory(repository)
@@ -254,4 +276,5 @@ fun BoxVaultNavHost(
             }
         }
     }
+}
 }
