@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & Common -->
+    <string name="app_name">BoxVault</string>
+    <string name="common_cancel">Скасувати</string>
+    <string name="common_save">Зберегти</string>
+    <string name="common_done">Готово</string>
+    <string name="common_back">Назад</string>
+    <string name="common_edit">Редагувати</string>
+    <string name="common_remove">Видалити</string>
+    <string name="common_close">Закрити</string>
+    <string name="common_add">Додати</string>
+    <string name="common_open">Відкрити</string>
+    <string name="common_all">Всі</string>
+    <string name="common_none">Жодного</string>
+    <string name="common_qty">Кількість: %d</string>
+
+    <!-- BoxVault Header -->
+    <string name="header_return_dashboard">Повернутися до панелі</string>
+    <string name="header_logo_content_description">Логотип BoxVault</string>
+    <string name="header_tap_for_dashboard">ТОРКНІТЬСЯ ДЛЯ ПАНЕЛІ</string>
+    <string name="header_tagline">100% локальний офлайн каталог сховища</string>
+
+    <!-- Photo Components & Dialogs -->
+    <string name="photo_add">Додати фото</string>
+    <string name="photo_change">Змінити фото</string>
+    <string name="photo_delete">Видалити фото</string>
+    <string name="photo_missing">Фото відсутнє</string>
+    <string name="photo_attached_cd">Прикріплене локальне фото</string>
+    <string name="photo_slot_label_default">Фото</string>
+    <string name="photo_source_dialog_title">Виберіть джерело фото</string>
+    <string name="photo_source_take_photo">Зробити фото</string>
+    <string name="photo_source_take_photo_desc">Зробити нове фото камерою</string>
+    <string name="photo_source_gallery">Вибрати з галереї</string>
+    <string name="photo_source_gallery_desc">Вибрати фото з локального сховища пристрою</string>
+    <string name="photo_source_remove">Видалити фото</string>
+    <string name="photo_source_remove_desc">Відкріпити фото від цього запису</string>
+
+    <!-- Offline Privacy Policy Dialog -->
+    <string name="privacy_title">100% офлайн архітектура приватності</string>
+    <string name="privacy_summary">BoxVault розроблено з нуля без залежності від хмари. Ваші дані інвентарю є виключно вашою власністю та ніколи не залишають ваш фізичний пристрій.</string>
+    <string name="privacy_pillar_db_title">100% локальна база даних SQLite на пристрої</string>
+    <string name="privacy_pillar_db_desc">Кожна коробка, кількість речей, категорія та посилання на фото зберігаються виключно у вашій приватній локальній базі Room SQLite на пристрої.</string>
+    <string name="privacy_pillar_network_title">Нуль мережевих дозволів</string>
+    <string name="privacy_pillar_network_desc">android.permission.INTERNET суворо вилучено (tools:node=\"remove\") в AndroidManifest.xml. Операційна система Android фізично забороняє будь-які вихідні мережеві з\'єднання.</string>
+    <string name="privacy_pillar_accounts_title">Без акаунтів, стеження та хмарної синхронізації</string>
+    <string name="privacy_pillar_accounts_desc">Без реєстрацій через email, паролів, хмарних профілів та аналітичних SDK. Сканер QR використовує вбудовані офлайн-моделі ML Kit.</string>
+    <string name="privacy_pillar_backup_title">Приватні локальні архівні копії SAF</string>
+    <string name="privacy_pillar_backup_desc">Резервні копії — це портативні .ZIP-архіви, які експортуються суворо через Android Storage Access Framework (SAF) до обраної вами папки або накопичувача.</string>
+    <string name="privacy_understood">Зрозуміло</string>
+
+    <!-- Theme & Sensory Dialog -->
+    <string name="theme_dialog_title">Налаштування та вигляд</string>
+    <string name="theme_palette_section">ПАЛІТРА ТЕМИ</string>
+    <string name="theme_mode_system">За замовчуванням</string>
+    <string name="theme_mode_system_desc">Відповідати світлому чи темному режиму Android</string>
+    <string name="theme_mode_light">Світла тема</string>
+    <string name="theme_mode_light_desc">Контрастна світла індустріальна палітра</string>
+    <string name="theme_mode_dark">Темна тема</string>
+    <string name="theme_mode_dark_desc">Контрастна темна палітра для погано освітлених підвалів і гаражів</string>
+    <string name="theme_sensory_section">СЕНСОРНИЙ ВІДГУК</string>
+    <string name="theme_sound_effects">Звукові ефекти</string>
+    <string name="theme_sound_effects_desc">Звукові кліки та сигнал сканування</string>
+    <string name="theme_haptics">Тактильний відгук</string>
+    <string name="theme_haptics_desc">Вібрація при скануванні QR, швидкому додаванні та зміні кількості</string>
+
+    <!-- Dashboard Screen -->
+    <string name="dashboard_title">Сховище</string>
+    <string name="dashboard_action_privacy">Офлайн політика приватності</string>
+    <string name="dashboard_action_theme">Вибрати тему</string>
+    <string name="dashboard_action_scan_qr">Сканувати QR-код коробки</string>
+    <string name="dashboard_action_print_pdf">Друк аркуша QR-етикеток</string>
+    <string name="dashboard_action_backup_restore">Резервне копіювання та відновлення</string>
+    <string name="dashboard_fab_new_box">Нова коробка</string>
+    <string name="dashboard_search_placeholder">Пошук речі, коду коробки, місця чи нотатки...</string>
+    <string name="dashboard_search_content_desc">Глобальний пошук</string>
+    <string name="dashboard_search_clear">Очистити пошук</string>
+    <string name="dashboard_room_create_title">Створити нову кімнату</string>
+    <string name="dashboard_room_create_button">Створити кімнату</string>
+    <string name="dashboard_room_edit_title">Редагувати кімнату</string>
+    <string name="dashboard_room_save_changes">Зберегти зміни</string>
+    <string name="dashboard_room_delete_title">Видалити кімнату?</string>
+    <string name="dashboard_room_delete_message">Ви дійсно бажаєте видалити \"%s\"? Усі призначені коробки безпечно збережуться як непризначені.</string>
+    <string name="dashboard_room_delete_confirm">Видалити кімнату</string>
+    <string name="dashboard_stat_rooms">КІМНАТИ</string>
+    <string name="dashboard_stat_boxes">КОРОБКИ</string>
+    <string name="dashboard_stat_total_items">ВСЬОГО РЕЧЕЙ</string>
+    <string name="dashboard_stat_unique_entries">УНІКАЛЬНІ ПОЗИЦІЇ</string>
+    <string name="dashboard_quick_add_room">+ Кімната</string>
+    <string name="dashboard_quick_scan_qr">Сканувати QR</string>
+    <string name="dashboard_quick_print_sheet">Друк QR</string>
+    <string name="dashboard_quick_backup_zip">Копія ZIP</string>
+    <string name="dashboard_room_counts">%1$d коробок • %2$d речей</string>
+    <string name="dashboard_room_collapse">Згорнути кімнату</string>
+    <string name="dashboard_room_expand">Розгорнути кімнату</string>
+    <string name="dashboard_room_edit">Редагувати кімнату</string>
+    <string name="dashboard_room_delete">Видалити кімнату</string>
+    <string name="dashboard_room_empty">До цієї кімнати ще не призначено жодної коробки.</string>
+    <string name="dashboard_unassigned_title">Непризначені / Загальні</string>
+    <string name="dashboard_unassigned_counts">%1$d коробок • %2$d речей (без кімнати)</string>
+    <string name="dashboard_unassigned_collapse">Згорнути непризначені</string>
+    <string name="dashboard_unassigned_expand">Розгорнути непризначені</string>
+    <string name="dashboard_filter_all_locations">Всі локації</string>
+    <string name="dashboard_box_quick_bulk">Масово +</string>
+    <string name="dashboard_box_fast_bulk_desc">Швидке масове внесення</string>
+    <string name="dashboard_box_items_count">%1$d речей (%2$d типів)</string>
+    <string name="dashboard_search_results_title">Результати пошуку для \"%s\"</string>
+    <string name="dashboard_search_no_results">Відповідних речей або коробок не знайдено</string>
+    <string name="dashboard_search_no_results_hint">Спробуйте шукати за назвою речі, кодом коробки (напр. BOX-001) або полицею.</string>
+    <string name="dashboard_search_matching_items">ЗНАЙДЕНІ РЕЧІ (%d)</string>
+    <string name="dashboard_search_matching_boxes">ЗНАЙДЕНІ КОРОБКИ (%d)</string>
+    <string name="dashboard_item_qty">Кількість: %d</string>
+    <string name="dashboard_empty_title">Ще немає каталогізованих коробок</string>
+    <string name="dashboard_empty_desc">Створіть першу коробку, впорядкуйте за кімнатами, надрукуйте QR-етикетки та використовуйте швидке масове внесення.</string>
+    <string name="dashboard_empty_create_box">Створити першу коробку</string>
+    <string name="dashboard_empty_create_room">Створити першу кімнату</string>
+    <string name="dashboard_empty_no_boxes_in_location">Немає коробок у \"%s\"</string>
+    <string name="dashboard_empty_show_all_locations">Показати всі локації</string>
+
+    <!-- Box Detail Screen -->
+    <string name="box_detail_title_fallback">Деталі коробки</string>
+    <string name="box_detail_loading">Завантаження...</string>
+    <string name="box_detail_view_qr">Переглянути QR-код</string>
+    <string name="box_detail_print_qr">Друк QR-етикетки</string>
+    <string name="box_detail_edit_box">Редагувати коробку</string>
+    <string name="box_detail_delete_box">Видалити коробку</string>
+    <string name="box_detail_not_found">Коробку не знайдено.</string>
+    <string name="box_detail_select_box_photo">Вибрати фото коробки</string>
+    <string name="box_detail_select_photo_for_item">Вибрати фото для %s</string>
+    <string name="box_detail_item_photo">Фото речі</string>
+    <string name="box_detail_add_box_photo">Додати фото коробки</string>
+    <string name="box_detail_total_qty_unique">• Всього: %1$d шт. (%2$d унікальних)</string>
+    <string name="box_detail_qr_tap_enlarge_cd">Торкніться для збільшення QR-коду</string>
+    <string name="box_detail_qr_tap_enlarge">Торкніться для збільшення / друку QR-етикетки</string>
+    <string name="box_detail_qr_code_for">Висококонтрастний QR-код для %s</string>
+    <string name="box_detail_qr_permanent_info">Цей QR-код кодує незмінний UUID коробки. Ви можете перейменовувати або переміщувати %s у будь-який час без повторного друку наліпки.</string>
+    <string name="box_detail_print_on_pdf">Друк на аркуші PDF</string>
+    <string name="box_detail_box_photos_header">ФОТО КОРОБКИ (%d)</string>
+    <string name="box_detail_photo_camera">Камера</string>
+    <string name="box_detail_photo_gallery">Галерея</string>
+    <string name="box_detail_items_in_box_header">РЕЧІ В КОРОБЦІ (всього: %d)</string>
+    <string name="box_detail_add_single_item">Додати 1 річ</string>
+    <string name="box_detail_filter_items_placeholder">Фільтр речей у %s... </string>
+    <string name="box_detail_empty_box">Ця коробка наразі порожня</string>
+    <string name="box_detail_no_items_match">Немає речей, що відповідають \"%s\"</string>
+    <string name="box_detail_start_fast_bulk">Почати швидке масове внесення</string>
+    <string name="box_detail_decrease_qty">Зменшити кількість</string>
+    <string name="box_detail_increase_qty">Збільшити кількість</string>
+    <string name="box_detail_item_photo_count">Фото (%d)</string>
+    <string name="box_detail_item_photo_btn">Фото</string>
+    <string name="box_detail_camera_perm_title">Потрібен дозвіл на доступ до камери</string>
+    <string name="box_detail_camera_perm_desc">BoxVault потребує доступу до камери для локальної зйомки коробок і речей. Кадри обробляються виключно на пристрої та ніколи не передаються.\n\nВи також можете вибрати наявне фото з локальної галереї.</string>
+    <string name="box_detail_camera_perm_gallery">Вибрати з галереї</string>
+    <string name="box_detail_delete_box_title">Видалити %1$s (%2$s)?</string>
+    <string name="box_detail_delete_box_message">Це назавжди видалить цю коробку, всі %d записів речей у ній та прикріплені локальні фото.</string>
+    <string name="box_detail_delete_box_confirm">Видалити коробку</string>
+    <string name="box_detail_add_item_title">Додати річ до коробки</string>
+    <string name="box_detail_edit_item_title">Редагувати річ</string>
+    <string name="box_detail_item_name_label">Назва речі *</string>
+    <string name="box_detail_item_qty_label">Кількість</string>
+    <string name="box_detail_item_cat_label">Категорія</string>
+    <string name="box_detail_item_notes_label">Нотатки</string>
+
+    <!-- Box Edit Screen -->
+    <string name="box_edit_title_edit">Редагувати коробку</string>
+    <string name="box_edit_title_assign_qr">Призначити надруковану QR-етикетку</string>
+    <string name="box_edit_title_new">Нова коробка сховища</string>
+    <string name="box_edit_save_box">Зберегти коробку</string>
+    <string name="box_edit_preprinted_title">Виявлено непризначену надруковану QR-наліпку</string>
+    <string name="box_edit_preprinted_desc">Збереження коробки назавжди прив\'яже її до відсканованого QR-коду (%s…).</string>
+    <string name="box_edit_qr_preview_cd">Попередній перегляд QR-коду</string>
+    <string name="box_edit_immutable_qr_title">Незмінний QR-код (безпечно перейменовувати/переміщувати)</string>
+    <string name="box_edit_short_code_label">Короткий код коробки *</string>
+    <string name="box_edit_short_code_placeholder">BOX-001</string>
+    <string name="box_edit_auto_code">Авто-код</string>
+    <string name="box_edit_auto_code_desc">Автоматично згенерувати наступний код</string>
+    <string name="box_edit_name_label">Назва коробки *</string>
+    <string name="box_edit_name_placeholder">напр. Електроінструменти та свердла</string>
+    <string name="box_edit_room_section">Призначена кімната / зона</string>
+    <string name="box_edit_new_room_btn">+ Нова кімната</string>
+    <string name="box_edit_room_unassigned">Немає (Непризначено)</string>
+    <string name="box_edit_location_label">Місце / Полиця (в кімнаті)</string>
+    <string name="box_edit_location_placeholder">напр. Гаражний стелаж B, полиця 2</string>
+    <string name="box_edit_category_label">Категорія</string>
+    <string name="box_edit_color_tag">Колірна мітка</string>
+    <string name="box_edit_notes_label">Нотатки (необов\'язково)</string>
+    <string name="box_edit_notes_placeholder">Важкий контейнер, крихкий вміст, сезонні речі... </string>
+    <string name="box_edit_save_changes">Зберегти зміни</string>
+    <string name="box_edit_create_box">Створити коробку</string>
+    <string name="room_create_title_default">Створити нову кімнату</string>
+    <string name="room_create_btn_default">Створити кімнату</string>
+    <string name="room_create_name_label">Назва кімнати / зони *</string>
+    <string name="room_create_name_placeholder">напр. Гараж, Горище, Вітальня</string>
+    <string name="room_create_color_accent">Колірний акцент кімнати</string>
+    <string name="room_create_error_required">Назва кімнати є обов\'язковою.</string>
+
+    <!-- Bulk Entry Screen -->
+    <string name="bulk_entry_fast_mode_title">Режим швидкого масового внесення речей</string>
+    <string name="bulk_entry_fast_mode_desc">Швидко каталогізуйте речі у %s без закриття клавіатури.</string>
+    <string name="bulk_entry_bulk_add_btn">Додати масово</string>
+    <string name="bulk_entry_title">Швидке внесення • %s</string>
+    <string name="bulk_entry_subtitle">%1$s (всього %2$d речей)</string>
+    <string name="bulk_entry_input_label">Введіть назву речі та натисніть Далі / Enter</string>
+    <string name="bulk_entry_input_placeholder">напр. Акумуляторний гайковерт</string>
+    <string name="bulk_entry_add_item_desc">Додати річ</string>
+    <string name="bulk_entry_add_btn">Додати</string>
+    <string name="bulk_entry_qty_label">Кількість:</string>
+    <string name="bulk_entry_note_chip">Нотатка</string>
+    <string name="bulk_entry_note_label">Необов\'язкова нотатка (скидається після додавання)</string>
+    <string name="bulk_entry_session_header">ДОДАНО В ЦІЙ СЕСІЇ (%d)</string>
+    <string name="bulk_entry_last_saved">Останнє збережене: %s</string>
+    <string name="bulk_entry_empty_hint">Введіть назву речі вище та натисніть Далі/Enter на клавіатурі. Клавіатура залишається відкритою, тож ви можете додати десятки речей за лічені секунди.</string>
+    <string name="bulk_entry_item_qty_cat">Кількість: %1$d • %2$s</string>
+    <string name="bulk_entry_bump_qty">+1</string>
+    <string name="bulk_entry_undo_desc">Скасувати додавання речі</string>
+    <string name="bulk_entry_undo_btn">Скасувати</string>
+
+    <!-- PDF Generator Screen -->
+    <string name="pdf_title">Аркуші QR-етикеток для друку</string>
+    <string name="pdf_subtitle">%1$d етикеток • %2$d стор. (%3$s)</string>
+    <string name="pdf_save_btn">Зберегти PDF</string>
+    <string name="pdf_section_mode">1. Режим генерації етикеток</string>
+    <string name="pdf_mode_existing_boxes">Наявні коробки (%d)</string>
+    <string name="pdf_mode_blank_stickers">Попередньо виділені порожні наліпки</string>
+    <string name="pdf_mode_existing_desc">Друк QR-етикеток для коробок, які вже каталогізовані в локальній базі даних.</string>
+    <string name="pdf_mode_blank_desc">Надрукуйте аркуш непризначених QR-етикеток із лініями для підпису. Коли ви пізніше наклеїте її на коробку та відскануєте, BoxVault автоматично відкриє налаштування нової коробки з цим UUID.</string>
+    <string name="pdf_section_layout">2. Макет аркуша та сітка</string>
+    <string name="pdf_paper_size_label">Розмір паперу:</string>
+    <string name="pdf_cut_guides_title">Пунктирні напрямні різання</string>
+    <string name="pdf_cut_guides_desc">Чіткий рендеринг QR за методом найближчого сусіда + біла зона спокою завжди ввімкнена</string>
+    <string name="pdf_section_blank_qty">3. Кількість порожніх етикеток</string>
+    <string name="pdf_new_uuids_btn">Нові UUID</string>
+    <string name="pdf_blank_count_option">%1$d етикеток (%2$d стор)</string>
+    <string name="pdf_blank_range_desc">Попередньо виділений діапазон: %1$s → %2$s (%3$d унікальних етикеток boxvault://box/&lt;uuid&gt;)</string>
+    <string name="pdf_section_select_boxes">3. Виберіть коробки для друку (%1$d/%2$d)</string>
+    <string name="pdf_select_all">Всі</string>
+    <string name="pdf_select_none">Жодної</string>
+    <string name="pdf_no_boxes">У базі даних ще немає коробок.</string>
+    <string name="pdf_switch_to_blank">Перемкнутися на порожні етикетки</string>
+    <string name="pdf_no_location">Локація не вказана</string>
+    <string name="pdf_export_btn">Експортувати аркуш PDF (%d етикеток)</string>
+    <string name="pdf_preset_large_title">2 × 4 Великі етикетки для коробок</string>
+    <string name="pdf_preset_large_desc">8 етикеток/стор — міцні пластикові бокси та коробки для переїзду</string>
+    <string name="pdf_preset_medium_title">3 × 7 Середні етикетки для коробок</string>
+    <string name="pdf_preset_medium_desc">21 етикетка/стор — стандартні архівні та поличні коробки</string>
+    <string name="pdf_preset_small_title">4 × 10 Малі етикетки для лотків</string>
+    <string name="pdf_preset_small_desc">40 етикеток/стор — шухляди для деталей, органайзери та дрібниці</string>
+    <string name="pdf_page_size_a4">A4 (210 × 297 мм)</string>
+    <string name="pdf_page_size_us_letter">US Letter (8.5 × 11 дюймів)</string>
+
+    <!-- Backup & Restore Screen -->
+    <string name="backup_title">Локальне резервне копіювання ZIP та відновлення</string>
+    <string name="backup_subtitle">100% офлайн SAF архів • Захист SHA-256 та Zip-Slip</string>
+    <string name="backup_processing_staging">Обробка архіву в ізольованому робочому каталозі...</string>
+    <string name="backup_inventory_title">Поточний інвентар сховища на пристрої</string>
+    <string name="backup_inventory_counts">%1$d Коробок • %2$d Унікальних речей (%3$d Загальна кількість)</string>
+    <string name="backup_inventory_desc">Усі фотографії зменшуються до макс. 1600px (80% JPEG) з нормалізованою орієнтацією EXIF для компактності архівів.</string>
+    <string name="backup_export_title">Експортувати портативну резервну копію .ZIP</string>
+    <string name="backup_export_desc">Включає backup_manifest.json + усі фотографії з контрольними сумами SHA-256</string>
+    <string name="backup_export_btn">Експортувати архів .ZIP через SAF</string>
+    <string name="backup_restore_title">Відновити з локального архіву .ZIP</string>
+    <string name="backup_restore_desc">Видобуває та перевіряє в cacheDir/restore_staging перед зміною робочих даних</string>
+    <string name="backup_restore_btn">Вибрати резервну копію .ZIP для відновлення</string>
+    <string name="backup_security_title">Гарантії криптографічної та архівної безпеки</string>
+    <string name="backup_sec_zipslip_title">Суворий захист від атак обходу шляхів Zip-Slip</string>
+    <string name="backup_sec_zipslip_desc">Кожен запис ZipEntry канонічно перевіряється в cacheDir/restore_staging. Записи, що містять \'..\' або виходять за межі кореня, викликають SecurityException.</string>
+    <string name="backup_sec_sha_title">Атомарна поетапна перевірка SHA-256</string>
+    <string name="backup_sec_sha_desc">Кожне фото перевіряється хешем SHA-256 та звіряється з backup_manifest.json перед перезаписом будь-якого рядка бази даних чи файлу.</string>
+    <string name="backup_sec_cloud_title">Нуль хмари / Нуль мережевих дозволів</string>
+    <string name="backup_sec_cloud_desc">android:allowBackup=\"false\" та tools:node=\"remove\" для INTERNET гарантують, що копії переміщуються лише туди, куди ви явно зберігаєте їх через Android SAF.</string>
+    <string name="backup_dialog_title">Відновити архів резервної копії?</string>
+    <string name="backup_dialog_message">BoxVault спочатку видобуде та перевірить усі контрольні суми SHA-256 фотографій в ізольованій папці. Поточний інвентар буде замінено лише в разі 100% проходження перевірок цілісності.</string>
+    <string name="backup_dialog_confirm">Перевірити та відновити</string>
+
+    <!-- QR Scanner Screen -->
+    <string name="scanner_title">Сканувати QR-етикетку коробки</string>
+    <string name="scanner_subtitle">100% офлайн сканер із вбудованим ML Kit</string>
+    <string name="scanner_toggle_torch">Перемкнути ліхтарик</string>
+    <string name="scanner_reticle_hint">Наведіть на будь-який QR-код BoxVault — наявні коробки відкриваються миттєво; порожні етикетки відкривають створення коробки.</string>
+    <string name="scanner_camera_perm_title">Потрібен дозвіл на камеру для сканування QR</string>
+    <string name="scanner_camera_perm_desc">Кадри з камери аналізуються суворо на пристрої за допомогою вбудованого ML Kit і ніколи не залишають ваш телефон.</string>
+    <string name="scanner_grant_perm_btn">Надати дозвіл на камеру</string>
+    <string name="scanner_manual_title">Ручний пошук за коротким кодом / QR</string>
+    <string name="scanner_manual_placeholder">напр. BOX-001 або boxvault://box/... </string>
+    <string name="scanner_manual_open_btn">Відкрити</string>
+</resources>
