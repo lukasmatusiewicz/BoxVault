@@ -81,9 +81,11 @@ import com.boxvault.app.data.preferences.UserPreferencesManager
 import com.boxvault.app.ui.components.PrivacyPolicyDialog
 import com.boxvault.app.ui.components.ThemeSelectionDialog
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.boxvault.app.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.data.local.entity.RoomEntity
 import com.boxvault.app.data.local.model.BoxSummary
@@ -128,7 +130,7 @@ fun DashboardScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Storage Vault",
+                        text = stringResource(R.string.dashboard_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -137,31 +139,31 @@ fun DashboardScreen(
                     IconButton(onClick = { showPrivacyDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Security,
-                            contentDescription = "Offline Privacy Policy"
+                            contentDescription = stringResource(R.string.dashboard_action_privacy)
                         )
                     }
                     IconButton(onClick = { showThemeDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Palette,
-                            contentDescription = "Select Theme Mode"
+                            contentDescription = stringResource(R.string.dashboard_action_theme)
                         )
                     }
                     IconButton(onClick = onNavigateToQrScanner) {
                         Icon(
                             imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = "Scan Box QR Code"
+                            contentDescription = stringResource(R.string.dashboard_action_scan_qr)
                         )
                     }
                     IconButton(onClick = onNavigateToPdfGenerator) {
                         Icon(
                             imageVector = Icons.Default.Print,
-                            contentDescription = "Print QR Label Sheet"
+                            contentDescription = stringResource(R.string.dashboard_action_print_pdf)
                         )
                     }
                     IconButton(onClick = onNavigateToBackupRestore) {
                         Icon(
                             imageVector = Icons.Default.Backup,
-                            contentDescription = "Backup & Restore"
+                            contentDescription = stringResource(R.string.dashboard_action_backup_restore)
                         )
                     }
                 },
@@ -179,7 +181,7 @@ fun DashboardScreen(
                         contentDescription = null
                     )
                 },
-                text = { Text("New Box") },
+                text = { Text(stringResource(R.string.dashboard_fab_new_box)) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             )
@@ -198,12 +200,12 @@ fun DashboardScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 placeholder = {
-                    Text("Search any item, box code, location, or note...")
+                    Text(stringResource(R.string.dashboard_search_placeholder))
                 },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Global Search"
+                        contentDescription = stringResource(R.string.dashboard_search_content_desc)
                     )
                 },
                 trailingIcon = {
@@ -211,7 +213,7 @@ fun DashboardScreen(
                         IconButton(onClick = viewModel::onClearSearch) {
                             Icon(
                                 imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear search"
+                                contentDescription = stringResource(R.string.dashboard_search_clear)
                             )
                         }
                     }
@@ -248,8 +250,8 @@ fun DashboardScreen(
 
     if (showCreateRoomDialog) {
         QuickCreateRoomDialog(
-            title = "Create New Room",
-            confirmButtonText = "Create Room",
+            title = stringResource(R.string.dashboard_room_create_title),
+            confirmButtonText = stringResource(R.string.dashboard_room_create_button),
             onDismiss = { showCreateRoomDialog = false },
             onCreateRoom = { name, colorHex ->
                 viewModel.createRoom(name, colorHex)
@@ -263,8 +265,8 @@ fun DashboardScreen(
         QuickCreateRoomDialog(
             initialName = target.name,
             initialColorHex = target.colorHex,
-            title = "Edit Room",
-            confirmButtonText = "Save Changes",
+            title = stringResource(R.string.dashboard_room_edit_title),
+            confirmButtonText = stringResource(R.string.dashboard_room_save_changes),
             onDismiss = { editingRoom = null },
             onCreateRoom = { name, colorHex ->
                 viewModel.updateRoom(target.id, name, colorHex, target.iconName)
@@ -277,10 +279,10 @@ fun DashboardScreen(
         val target = deletingRoom!!
         AlertDialog(
             onDismissRequest = { deletingRoom = null },
-            title = { Text("Delete Room?") },
+            title = { Text(stringResource(R.string.dashboard_room_delete_title)) },
             text = {
                 Text(
-                    "Are you sure you want to delete \"${target.name}\"? All child boxes will be safely preserved as unassigned boxes."
+                    stringResource(R.string.dashboard_room_delete_message, target.name)
                 )
             },
             confirmButton = {
@@ -294,12 +296,12 @@ fun DashboardScreen(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Delete Room")
+                    Text(stringResource(R.string.dashboard_room_delete_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { deletingRoom = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -440,7 +442,7 @@ private fun DashboardHomeContent(
                                         .padding(horizontal = 24.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = "No boxes assigned to this room yet.",
+                                        text = stringResource(R.string.dashboard_room_empty),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(12.dp)
@@ -530,20 +532,20 @@ private fun SummaryStatsBanner(
                 if (totalRooms > 0) {
                     StatColumn(
                         value = totalRooms.toString(),
-                        label = "ROOMS"
+                        label = stringResource(R.string.dashboard_stat_rooms)
                     )
                 }
                 StatColumn(
                     value = totalBoxes.toString(),
-                    label = "BOXES"
+                    label = stringResource(R.string.dashboard_stat_boxes)
                 )
                 StatColumn(
                     value = totalItemQuantity.toString(),
-                    label = "TOTAL ITEMS"
+                    label = stringResource(R.string.dashboard_stat_total_items)
                 )
                 StatColumn(
                     value = distinctItemCount.toString(),
-                    label = "UNIQUE ENTRIES"
+                    label = stringResource(R.string.dashboard_stat_unique_entries)
                 )
             }
 
@@ -553,7 +555,7 @@ private fun SummaryStatsBanner(
                 item {
                     AssistChip(
                         onClick = onCreateRoomClick,
-                        label = { Text("+ Room") },
+                        label = { Text(stringResource(R.string.dashboard_quick_add_room)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Add,
@@ -566,7 +568,7 @@ private fun SummaryStatsBanner(
                 item {
                     AssistChip(
                         onClick = onScanQrClick,
-                        label = { Text("Scan QR") },
+                        label = { Text(stringResource(R.string.dashboard_quick_scan_qr)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.QrCodeScanner,
@@ -579,7 +581,7 @@ private fun SummaryStatsBanner(
                 item {
                     AssistChip(
                         onClick = onPrintQrSheetClick,
-                        label = { Text("Print QR Sheet") },
+                        label = { Text(stringResource(R.string.dashboard_quick_print_sheet)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Print,
@@ -592,7 +594,7 @@ private fun SummaryStatsBanner(
                 item {
                     AssistChip(
                         onClick = onBackupRestoreClick,
-                        label = { Text("Backup ZIP") },
+                        label = { Text(stringResource(R.string.dashboard_quick_backup_zip)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Backup,
@@ -656,7 +658,7 @@ private fun RoomHeaderCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "$boxCount boxes • $totalItems items",
+                        text = stringResource(R.string.dashboard_room_counts, boxCount, totalItems),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -666,21 +668,23 @@ private fun RoomHeaderCard(
                 IconButton(onClick = onToggleExpand) {
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (isExpanded) "Collapse Room" else "Expand Room",
+                        contentDescription = stringResource(
+                            if (isExpanded) R.string.dashboard_room_collapse else R.string.dashboard_room_expand
+                        ),
                         modifier = Modifier.size(20.dp)
                     )
                 }
                 IconButton(onClick = onEditRoom) {
                     Icon(
                         imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit Room",
+                        contentDescription = stringResource(R.string.dashboard_room_edit),
                         modifier = Modifier.size(18.dp)
                     )
                 }
                 IconButton(onClick = onDeleteRoom) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete Room",
+                        contentDescription = stringResource(R.string.dashboard_room_delete),
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(18.dp)
                     )
@@ -728,12 +732,12 @@ private fun UnassignedHeaderCard(
                 )
                 Column {
                     Text(
-                        text = "Unassigned / General",
+                        text = stringResource(R.string.dashboard_unassigned_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "$boxCount boxes • $totalItems items (no room assigned)",
+                        text = stringResource(R.string.dashboard_unassigned_counts, boxCount, totalItems),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -742,7 +746,9 @@ private fun UnassignedHeaderCard(
             IconButton(onClick = onToggleExpand) {
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (isExpanded) "Collapse Unassigned" else "Expand Unassigned",
+                    contentDescription = stringResource(
+                        if (isExpanded) R.string.dashboard_unassigned_collapse else R.string.dashboard_unassigned_expand
+                    ),
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -784,7 +790,7 @@ private fun LocationFilterRow(
             FilterChip(
                 selected = selectedLocation == null,
                 onClick = { onSelectLocation(null) },
-                label = { Text("All Locations") }
+                label = { Text(stringResource(R.string.dashboard_filter_all_locations)) }
             )
         }
         items(locations) { location ->
@@ -882,11 +888,11 @@ private fun BoxSummaryCard(
 
                     AssistChip(
                         onClick = onQuickBulkEntryClick,
-                        label = { Text("Bulk +") },
+                        label = { Text(stringResource(R.string.dashboard_box_quick_bulk)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Bolt,
-                                contentDescription = "Fast Bulk Entry",
+                                contentDescription = stringResource(R.string.dashboard_box_fast_bulk_desc),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -913,7 +919,7 @@ private fun BoxSummaryCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "${summary.totalQuantity} items (${summary.itemCount} types)",
+                            text = stringResource(R.string.dashboard_box_items_count, summary.totalQuantity, summary.itemCount),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -971,7 +977,7 @@ private fun GlobalSearchResultsContent(
     ) {
         item {
             Text(
-                text = "Instant Search Results for \"$query\"",
+                text = stringResource(R.string.dashboard_search_results_title, query),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -992,12 +998,12 @@ private fun GlobalSearchResultsContent(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "No matching items or boxes found",
+                            text = stringResource(R.string.dashboard_search_no_results),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Try searching by item name, box code (e.g. BOX-001), or shelf location.",
+                            text = stringResource(R.string.dashboard_search_no_results_hint),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1009,7 +1015,7 @@ private fun GlobalSearchResultsContent(
         if (matchingItems.isNotEmpty()) {
             item {
                 Text(
-                    text = "MATCHING ITEMS (${matchingItems.size})",
+                    text = stringResource(R.string.dashboard_search_matching_items, matchingItems.size),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -1029,7 +1035,7 @@ private fun GlobalSearchResultsContent(
             item {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "MATCHING BOXES (${matchingBoxes.size})",
+                    text = stringResource(R.string.dashboard_search_matching_boxes, matchingBoxes.size),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -1090,7 +1096,7 @@ private fun SearchMatchingItemCard(
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = "Qty: ${itemWithBox.item.quantity}",
+                        text = stringResource(R.string.dashboard_item_qty, itemWithBox.item.quantity),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -1197,11 +1203,11 @@ private fun EmptyDashboardState(
             )
             if (!hasAnyBoxes) {
                 Text(
-                    text = "No Storage Boxes Cataloged Yet",
+                    text = stringResource(R.string.dashboard_empty_title),
                     style = MaterialTheme.typography.titleLarge
                 )
                 Text(
-                    text = "Create your first box, organize with rooms, print QR labels, and use Fast Bulk Entry to catalog items in seconds.",
+                    text = stringResource(R.string.dashboard_empty_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1209,7 +1215,7 @@ private fun EmptyDashboardState(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AssistChip(
                         onClick = onCreateBoxClick,
-                        label = { Text("Create First Box") },
+                        label = { Text(stringResource(R.string.dashboard_empty_create_box)) },
                         leadingIcon = {
                             Icon(imageVector = Icons.Default.Add, contentDescription = null)
                         }
@@ -1217,7 +1223,7 @@ private fun EmptyDashboardState(
                     if (!hasAnyRooms) {
                         AssistChip(
                             onClick = onCreateRoomClick,
-                            label = { Text("Create First Room") },
+                            label = { Text(stringResource(R.string.dashboard_empty_create_room)) },
                             leadingIcon = {
                                 Icon(imageVector = Icons.Default.MeetingRoom, contentDescription = null)
                             }
@@ -1226,12 +1232,12 @@ private fun EmptyDashboardState(
                 }
             } else {
                 Text(
-                    text = "No boxes in \"$selectedLocation\"",
+                    text = stringResource(R.string.dashboard_empty_no_boxes_in_location, selectedLocation ?: ""),
                     style = MaterialTheme.typography.titleLarge
                 )
                 AssistChip(
                     onClick = onClearLocationFilter,
-                    label = { Text("Show All Locations") }
+                    label = { Text(stringResource(R.string.dashboard_empty_show_all_locations)) }
                 )
             }
         }

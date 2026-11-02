@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & Common -->
+    <string name="app_name">BoxVault</string>
+    <string name="common_cancel">Annulla</string>
+    <string name="common_save">Salva</string>
+    <string name="common_done">Fatto</string>
+    <string name="common_back">Indietro</string>
+    <string name="common_edit">Modifica</string>
+    <string name="common_remove">Rimuovi</string>
+    <string name="common_close">Chiudi</string>
+    <string name="common_add">Aggiungi</string>
+    <string name="common_open">Apri</string>
+    <string name="common_all">Tutti</string>
+    <string name="common_none">Nessuno</string>
+    <string name="common_qty">Qtà: %d</string>
+
+    <!-- BoxVault Header -->
+    <string name="header_return_dashboard">Torna alla dashboard</string>
+    <string name="header_logo_content_description">Logo BoxVault</string>
+    <string name="header_tap_for_dashboard">TOCCA PER LA DASHBOARD</string>
+    <string name="header_tagline">Catalogo di stoccaggio 100% locale offline</string>
+
+    <!-- Photo Components & Dialogs -->
+    <string name="photo_add">Aggiungi foto</string>
+    <string name="photo_change">Cambia foto</string>
+    <string name="photo_delete">Elimina foto</string>
+    <string name="photo_missing">Foto mancante</string>
+    <string name="photo_attached_cd">Foto locale allegata</string>
+    <string name="photo_slot_label_default">Foto</string>
+    <string name="photo_source_dialog_title">Seleziona sorgente foto</string>
+    <string name="photo_source_take_photo">Scatta foto</string>
+    <string name="photo_source_take_photo_desc">Cattura nuova foto con la fotocamera</string>
+    <string name="photo_source_gallery">Scegli dalla galleria</string>
+    <string name="photo_source_gallery_desc">Seleziona foto dalla memoria locale</string>
+    <string name="photo_source_remove">Rimuovi foto</string>
+    <string name="photo_source_remove_desc">Scollega la foto da questa voce</string>
+
+    <!-- Offline Privacy Policy Dialog -->
+    <string name="privacy_title">Architettura di privacy 100% offline</string>
+    <string name="privacy_summary">BoxVault è progettato da zero senza dipendenze dal cloud. I tuoi dati di inventario sono esclusivamente di tua proprietà e non lasciano mai il tuo dispositivo fisico.</string>
+    <string name="privacy_pillar_db_title">Database SQLite 100% locale sul dispositivo</string>
+    <string name="privacy_pillar_db_desc">Ogni scatola, quantità di articoli, categoria e riferimento fotografico è memorizzato esclusivamente nel database privato Room SQLite sulla memoria del dispositivo.</string>
+    <string name="privacy_pillar_network_title">Zero permessi di rete</string>
+    <string name="privacy_pillar_network_desc">android.permission.INTERNET è rigorosamente rimosso (tools:node=\"remove\") in AndroidManifest.xml. Il sistema operativo Android impedisce a BoxVault qualsiasi connessione in uscita.</string>
+    <string name="privacy_pillar_accounts_title">Nessun account, tracciamento o sincronizzazione cloud</string>
+    <string name="privacy_pillar_accounts_desc">Nessuna registrazione e-mail, nessuna password, nessun account cloud e nessun SDK di analisi o telemetria. Lo scanner QR utilizza modelli ML Kit offline integrati.</string>
+    <string name="privacy_pillar_backup_title">Backup privati locali SAF</string>
+    <string name="privacy_pillar_backup_desc">I backup sono archivi .ZIP portabili esportati esclusivamente tramite lo Storage Access Framework (SAF) di Android verso una cartella locale o unità esterna a tua scelta.</string>
+    <string name="privacy_understood">Ho capito</string>
+
+    <!-- Theme & Sensory Dialog -->
+    <string name="theme_dialog_title">Impostazioni e aspetto</string>
+    <string name="theme_palette_section">PALETTE DEL TEMA</string>
+    <string name="theme_mode_system">Predefinito di sistema</string>
+    <string name="theme_mode_system_desc">Segui la modalità chiara o scura di Android</string>
+    <string name="theme_mode_light">Tema chiaro</string>
+    <string name="theme_mode_light_desc">Palette industriale ad alto contrasto per ambienti luminosi</string>
+    <string name="theme_mode_dark">Tema scuro</string>
+    <string name="theme_mode_dark_desc">Palette scura ad alto contrasto per cantine e garage poco illuminati</string>
+    <string name="theme_sensory_section">RISPOSTA SENSORIALE</string>
+    <string name="theme_sound_effects">Effetti sonori</string>
+    <string name="theme_sound_effects_desc">Clic audio e segnale sonoro di scansione</string>
+    <string name="theme_haptics">Risposta tattile</string>
+    <string name="theme_haptics_desc">Vibrazione aptica su scansione QR, aggiunta rapida e modifica quantità</string>
+
+    <!-- Dashboard Screen -->
+    <string name="dashboard_title">Deposito</string>
+    <string name="dashboard_action_privacy">Informativa privacy offline</string>
+    <string name="dashboard_action_theme">Seleziona tema</string>
+    <string name="dashboard_action_scan_qr">Scansiona codice QR scatola</string>
+    <string name="dashboard_action_print_pdf">Stampa foglio etichette QR</string>
+    <string name="dashboard_action_backup_restore">Backup e ripristino</string>
+    <string name="dashboard_fab_new_box">Nuova scatola</string>
+    <string name="dashboard_search_placeholder">Cerca articolo, codice scatola, posizione o nota...</string>
+    <string name="dashboard_search_content_desc">Ricerca globale</string>
+    <string name="dashboard_search_clear">Cancella ricerca</string>
+    <string name="dashboard_room_create_title">Crea nuova stanza</string>
+    <string name="dashboard_room_create_button">Crea stanza</string>
+    <string name="dashboard_room_edit_title">Modifica stanza</string>
+    <string name="dashboard_room_save_changes">Salva modifiche</string>
+    <string name="dashboard_room_delete_title">Eliminare la stanza?</string>
+    <string name="dashboard_room_delete_message">Sei sicuro di voler eliminare \"%s\"? Tutte le scatole associate saranno conservate in modo sicuro come scatole non assegnate.</string>
+    <string name="dashboard_room_delete_confirm">Elimina stanza</string>
+    <string name="dashboard_stat_rooms">STANZE</string>
+    <string name="dashboard_stat_boxes">SCATOLE</string>
+    <string name="dashboard_stat_total_items">ARTICOLI TOTALI</string>
+    <string name="dashboard_stat_unique_entries">VOCI UNICHE</string>
+    <string name="dashboard_quick_add_room">+ Stanza</string>
+    <string name="dashboard_quick_scan_qr">Scansiona QR</string>
+    <string name="dashboard_quick_print_sheet">Stampa foglio</string>
+    <string name="dashboard_quick_backup_zip">Backup ZIP</string>
+    <string name="dashboard_room_counts">%1$d scatole • %2$d articoli</string>
+    <string name="dashboard_room_collapse">Comprimi stanza</string>
+    <string name="dashboard_room_expand">Espandi stanza</string>
+    <string name="dashboard_room_edit">Modifica stanza</string>
+    <string name="dashboard_room_delete">Elimina stanza</string>
+    <string name="dashboard_room_empty">Nessuna scatola ancora assegnata a questa stanza.</string>
+    <string name="dashboard_unassigned_title">Non assegnato / Generale</string>
+    <string name="dashboard_unassigned_counts">%1$d scatole • %2$d articoli (nessuna stanza assegnata)</string>
+    <string name="dashboard_unassigned_collapse">Comprimi non assegnati</string>
+    <string name="dashboard_unassigned_expand">Espandi non assegnati</string>
+    <string name="dashboard_filter_all_locations">Tutte le posizioni</string>
+    <string name="dashboard_box_quick_bulk">Serie +</string>
+    <string name="dashboard_box_fast_bulk_desc">Inserimento rapido in serie</string>
+    <string name="dashboard_box_items_count">%1$d articoli (%2$d tipi)</string>
+    <string name="dashboard_search_results_title">Risultati di ricerca per \"%s\"</string>
+    <string name="dashboard_search_no_results">Nessun articolo o scatola corrispondente trovato</string>
+    <string name="dashboard_search_no_results_hint">Prova a cercare per nome articolo, codice scatola (es. BOX-001) o scaffale.</string>
+    <string name="dashboard_search_matching_items">ARTICOLI CORRISPONDENTI (%d)</string>
+    <string name="dashboard_search_matching_boxes">SCATOLE CORRISPONDENTI (%d)</string>
+    <string name="dashboard_item_qty">Qtà: %d</string>
+    <string name="dashboard_empty_title">Nessuna scatola ancora catalogata</string>
+    <string name="dashboard_empty_desc">Crea la tua prima scatola, organizzala in stanze, stampa etichette QR e usa l\'inserimento rapido in serie.</string>
+    <string name="dashboard_empty_create_box">Crea la prima scatola</string>
+    <string name="dashboard_empty_create_room">Crea la prima stanza</string>
+    <string name="dashboard_empty_no_boxes_in_location">Nessuna scatola in \"%s\"</string>
+    <string name="dashboard_empty_show_all_locations">Mostra tutte le posizioni</string>
+
+    <!-- Box Detail Screen -->
+    <string name="box_detail_title_fallback">Dettaglio scatola</string>
+    <string name="box_detail_loading">Caricamento...</string>
+    <string name="box_detail_view_qr">Visualizza codice QR</string>
+    <string name="box_detail_print_qr">Stampa etichetta QR</string>
+    <string name="box_detail_edit_box">Modifica scatola</string>
+    <string name="box_detail_delete_box">Elimina scatola</string>
+    <string name="box_detail_not_found">Scatola non trovata.</string>
+    <string name="box_detail_select_box_photo">Seleziona foto scatola</string>
+    <string name="box_detail_select_photo_for_item">Seleziona foto per %s</string>
+    <string name="box_detail_item_photo">Foto articolo</string>
+    <string name="box_detail_add_box_photo">Aggiungi foto scatola</string>
+    <string name="box_detail_total_qty_unique">• Qtà totale: %1$d (%2$d unici)</string>
+    <string name="box_detail_qr_tap_enlarge_cd">Tocca per ingrandire il codice QR</string>
+    <string name="box_detail_qr_tap_enlarge">Tocca per ingrandire / stampare etichetta QR</string>
+    <string name="box_detail_qr_code_for">Codice QR ad alto contrasto per %s</string>
+    <string name="box_detail_qr_permanent_info">Questo codice QR codifica l\'UUID immutabile della scatola. Puoi rinominare o spostare %s in qualsiasi momento senza dover ristampare l\'adesivo.</string>
+    <string name="box_detail_print_on_pdf">Stampa su foglio PDF</string>
+    <string name="box_detail_box_photos_header">FOTO DELLA SCATOLA (%d)</string>
+    <string name="box_detail_photo_camera">Fotocamera</string>
+    <string name="box_detail_photo_gallery">Galleria</string>
+    <string name="box_detail_items_in_box_header">ARTICOLI NELLA SCATOLA (%d totali)</string>
+    <string name="box_detail_add_single_item">Aggiungi 1 articolo</string>
+    <string name="box_detail_filter_items_placeholder">Filtra articoli in %s...</string>
+    <string name="box_detail_empty_box">Questa scatola è attualmente vuota</string>
+    <string name="box_detail_no_items_match">Nessun articolo corrisponde a \"%s\"</string>
+    <string name="box_detail_start_fast_bulk">Avvia inserimento rapido in serie</string>
+    <string name="box_detail_decrease_qty">Diminuisci quantità</string>
+    <string name="box_detail_increase_qty">Aumenta quantità</string>
+    <string name="box_detail_item_photo_count">Foto (%d)</string>
+    <string name="box_detail_item_photo_btn">Foto</string>
+    <string name="box_detail_camera_perm_title">Permesso fotocamera richiesto</string>
+    <string name="box_detail_camera_perm_desc">BoxVault richiede l\'accesso alla fotocamera per scattare foto di scatole e articoli localmente. Le immagini vengono elaborate interamente sul dispositivo e non vengono mai condivise.\n\nPuoi anche scegliere una foto esistente dalla galleria locale.</string>
+    <string name="box_detail_camera_perm_gallery">Scegli dalla galleria</string>
+    <string name="box_detail_delete_box_title">Eliminare %1$s (%2$s)?</string>
+    <string name="box_detail_delete_box_message">Questa operazione eliminerà definitivamente questa scatola, tutte le %d voci di articoli al suo interno e le foto locali allegate.</string>
+    <string name="box_detail_delete_box_confirm">Elimina scatola</string>
+    <string name="box_detail_add_item_title">Aggiungi articolo alla scatola</string>
+    <string name="box_detail_edit_item_title">Modifica articolo</string>
+    <string name="box_detail_item_name_label">Nome articolo *</string>
+    <string name="box_detail_item_qty_label">Quantità</string>
+    <string name="box_detail_item_cat_label">Categoria</string>
+    <string name="box_detail_item_notes_label">Note</string>
+
+    <!-- Box Edit Screen -->
+    <string name="box_edit_title_edit">Modifica scatola</string>
+    <string name="box_edit_title_assign_qr">Assegna etichetta QR prestampata</string>
+    <string name="box_edit_title_new">Nuova scatola</string>
+    <string name="box_edit_save_box">Salva scatola</string>
+    <string name="box_edit_preprinted_title">Rilevata etichetta QR prestampata non assegnata</string>
+    <string name="box_edit_preprinted_desc">Il salvataggio collegherà permanentemente questa scatola al codice QR scansionato (%s…).</string>
+    <string name="box_edit_qr_preview_cd">Anteprima codice QR</string>
+    <string name="box_edit_immutable_qr_title">Payload QR immutabile (sicuro rinominare/spostare)</string>
+    <string name="box_edit_short_code_label">Codice breve scatola *</string>
+    <string name="box_edit_short_code_placeholder">BOX-001</string>
+    <string name="box_edit_auto_code">Codice auto</string>
+    <string name="box_edit_auto_code_desc">Genera automaticamente il codice successivo</string>
+    <string name="box_edit_name_label">Nome scatola *</string>
+    <string name="box_edit_name_placeholder">es. Utensili elettrici e punte</string>
+    <string name="box_edit_room_section">Stanza / Area assegnata</string>
+    <string name="box_edit_new_room_btn">+ Nuova stanza</string>
+    <string name="box_edit_room_unassigned">Nessuna (Non assegnata)</string>
+    <string name="box_edit_location_label">Posizione / Scaffale (nella stanza)</string>
+    <string name="box_edit_location_placeholder">es. Scaffale garage B, ripiano 2</string>
+    <string name="box_edit_category_label">Categoria</string>
+    <string name="box_edit_color_tag">Etichetta colore</string>
+    <string name="box_edit_notes_label">Note (opzionale)</string>
+    <string name="box_edit_notes_placeholder">Contenitore pesante, contenuto fragile, articoli stagionali... </string>
+    <string name="box_edit_save_changes">Salva modifiche</string>
+    <string name="box_edit_create_box">Crea scatola</string>
+    <string name="room_create_title_default">Crea nuova stanza</string>
+    <string name="room_create_btn_default">Crea stanza</string>
+    <string name="room_create_name_label">Nome stanza / area *</string>
+    <string name="room_create_name_placeholder">es. Garage, Soffitta, Soggiorno</string>
+    <string name="room_create_color_accent">Colore distintivo stanza</string>
+    <string name="room_create_error_required">Il nome della stanza è obbligatorio.</string>
+
+    <!-- Bulk Entry Screen -->
+    <string name="bulk_entry_fast_mode_title">Modalità inserimento rapido in serie</string>
+    <string name="bulk_entry_fast_mode_desc">Cataloga rapidamente gli articoli in %s senza mai chiudere la tastiera.</string>
+    <string name="bulk_entry_bulk_add_btn">Aggiunta in serie</string>
+    <string name="bulk_entry_title">Inserimento rapido • %s</string>
+    <string name="bulk_entry_subtitle">%1$s (%2$d articoli totali)</string>
+    <string name="bulk_entry_input_label">Digita il nome e premi Avanti / Invio</string>
+    <string name="bulk_entry_input_placeholder">es. Avvitatore a impulsi a batteria</string>
+    <string name="bulk_entry_add_item_desc">Aggiungi articolo</string>
+    <string name="bulk_entry_add_btn">Aggiungi</string>
+    <string name="bulk_entry_qty_label">Qtà:</string>
+    <string name="bulk_entry_note_chip">Nota</string>
+    <string name="bulk_entry_note_label">Nota opzionale (si azzera dopo ogni aggiunta)</string>
+    <string name="bulk_entry_session_header">AGGIUNTI IN QUESTA SESSIONE (%d)</string>
+    <string name="bulk_entry_last_saved">Ultimo salvataggio: %s</string>
+    <string name="bulk_entry_empty_hint">Digita il nome di un articolo sopra e premi Avanti/Invio sulla tastiera. La tastiera rimane aperta per permetterti di aggiungere decine di articoli in pochi secondi.</string>
+    <string name="bulk_entry_item_qty_cat">Qtà: %1$d • %2$s</string>
+    <string name="bulk_entry_bump_qty">+1</string>
+    <string name="bulk_entry_undo_desc">Annulla articolo</string>
+    <string name="bulk_entry_undo_btn">Annulla</string>
+
+    <!-- PDF Generator Screen -->
+    <string name="pdf_title">Fogli di etichette QR stampabili</string>
+    <string name="pdf_subtitle">%1$d etichette • %2$d pagina/e (%3$s)</string>
+    <string name="pdf_save_btn">Salva PDF</string>
+    <string name="pdf_section_mode">1. Modalità generazione etichette</string>
+    <string name="pdf_mode_existing_boxes">Scatole esistenti (%d)</string>
+    <string name="pdf_mode_blank_stickers">Etichette vuote preallocate</string>
+    <string name="pdf_mode_existing_desc">Stampa etichette QR per le scatole già catalogate nel database locale.</string>
+    <string name="pdf_mode_blank_desc">Stampa un foglio di etichette QR non assegnate con righe per scrivere. Quando ne applicherai una su una scatola e la scansionerai, BoxVault aprirà automaticamente la creazione con quell\'UUID.</string>
+    <string name="pdf_section_layout">2. Layout foglio e griglia</string>
+    <string name="pdf_paper_size_label">Formato carta:</string>
+    <string name="pdf_cut_guides_title">Linee guida tratteggiate di taglio</string>
+    <string name="pdf_cut_guides_desc">Rendering QR nitido nearest-neighbor + zona di sicurezza bianca sempre attiva</string>
+    <string name="pdf_section_blank_qty">3. Quantità etichette vuote</string>
+    <string name="pdf_new_uuids_btn">Nuovi UUID</string>
+    <string name="pdf_blank_count_option">%1$d etichette (%2$d pag)</string>
+    <string name="pdf_blank_range_desc">Intervallo preallocato: %1$s → %2$s (%3$d etichette uniche boxvault://box/&lt;uuid&gt;)</string>
+    <string name="pdf_section_select_boxes">3. Seleziona scatole da stampare (%1$d/%2$d)</string>
+    <string name="pdf_select_all">Tutte</string>
+    <string name="pdf_select_none">Nessuna</string>
+    <string name="pdf_no_boxes">Nessuna scatola presente nel database.</string>
+    <string name="pdf_switch_to_blank">Passa alle etichette vuote</string>
+    <string name="pdf_no_location">Nessuna posizione impostata</string>
+    <string name="pdf_export_btn">Esporta PDF stampabile (%d etichette)</string>
+    <string name="pdf_preset_large_title">2 × 4 Etichette grandi per scatoloni</string>
+    <string name="pdf_preset_large_desc">8 etichette/pagina — contenitori pesanti e scatole da trasloco</string>
+    <string name="pdf_preset_medium_title">3 × 7 Etichette medie per scatole</string>
+    <string name="pdf_preset_medium_desc">21 etichette/pagina — scatole archivio e scaffali standard</string>
+    <string name="pdf_preset_small_title">4 × 10 Piccole etichette per vaschette</string>
+    <string name="pdf_preset_small_desc">40 etichette/pagina — cassettiere per minuteria, contenitori e organizer</string>
+    <string name="pdf_page_size_a4">A4 (210 × 297 mm)</string>
+    <string name="pdf_page_size_us_letter">US Letter (8.5 × 11 in)</string>
+
+    <!-- Backup & Restore Screen -->
+    <string name="backup_title">Backup e ripristino ZIP locale</string>
+    <string name="backup_subtitle">Archivio SAF 100% offline • Protetto da SHA-256 e Zip-Slip</string>
+    <string name="backup_processing_staging">Elaborazione archivio nella directory di staging isolata...</string>
+    <string name="backup_inventory_title">Inventario attuale sul dispositivo</string>
+    <string name="backup_inventory_counts">%1$d Scatole • %2$d Articoli unici (%3$d Qtà totale)</string>
+    <string name="backup_inventory_desc">Tutte le foto vengono ridotte a max 1600px (80% JPEG) con orientamento EXIF normalizzato per archivi compatti.</string>
+    <string name="backup_export_title">Esporta backup .ZIP portatile</string>
+    <string name="backup_export_desc">Include backup_manifest.json + tutte le foto con checksum SHA-256</string>
+    <string name="backup_export_btn">Esporta archivio .ZIP tramite SAF</string>
+    <string name="backup_restore_title">Ripristina da archivio .ZIP locale</string>
+    <string name="backup_restore_desc">Estrae e verifica all\'interno di cacheDir/restore_staging prima di toccare i dati attivi</string>
+    <string name="backup_restore_btn">Seleziona backup .ZIP da ripristinare</string>
+    <string name="backup_security_title">Garanzie di sicurezza crittografica e archivio</string>
+    <string name="backup_sec_zipslip_title">Difesa rigorosa contro Zip-Slip Path Traversal</string>
+    <string name="backup_sec_zipslip_desc">Ogni ZipEntry è convalidata canonicamente in cacheDir/restore_staging. Le voci contenenti \'..\' o che escono dalla radice sollevano una SecurityException.</string>
+    <string name="backup_sec_sha_title">Verifica atomica a fasi SHA-256</string>
+    <string name="backup_sec_sha_desc">Ogni foto estratta viene verificata con hash SHA-256 rispetto a backup_manifest.json prima di sovrascrivere righe del database o file.</string>
+    <string name="backup_sec_cloud_title">Zero cloud / Zero permessi di rete</string>
+    <string name="backup_sec_cloud_desc">android:allowBackup=\"false\" e tools:node=\"remove\" su INTERNET garantiscono che i backup si spostino solo dove li salvi esplicitamente tramite Android SAF.</string>
+    <string name="backup_dialog_title">Ripristinare l\'archivio di backup?</string>
+    <string name="backup_dialog_message">BoxVault estrarrà e verificherà prima tutti i checksum SHA-256 delle foto in una cartella di staging isolata. Solo se il 100% dei controlli ha esito positivo, l\'inventario attuale verrà sostituito.</string>
+    <string name="backup_dialog_confirm">Verifica e ripristina</string>
+
+    <!-- QR Scanner Screen -->
+    <string name="scanner_title">Scansiona etichetta QR scatola</string>
+    <string name="scanner_subtitle">Scanner ML Kit integrato 100% offline</string>
+    <string name="scanner_toggle_torch">Attiva/disattiva torcia</string>
+    <string name="scanner_reticle_hint">Inquadra qualsiasi codice QR BoxVault — le scatole esistenti si aprono subito; le etichette vuote aprono la creazione scatola.</string>
+    <string name="scanner_camera_perm_title">Permesso fotocamera richiesto per scansione QR</string>
+    <string name="scanner_camera_perm_desc">I fotogrammi della fotocamera vengono analizzati esclusivamente sul dispositivo tramite ML Kit integrato e non lasciano mai il telefono.</string>
+    <string name="scanner_grant_perm_btn">Concedi permesso fotocamera</string>
+    <string name="scanner_manual_title">Ricerca manuale codice breve / QR</string>
+    <string name="scanner_manual_placeholder">es. BOX-001 o boxvault://box/...</string>
+    <string name="scanner_manual_open_btn">Apri</string>
+</resources>

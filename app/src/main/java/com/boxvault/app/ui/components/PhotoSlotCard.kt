@@ -29,9 +29,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.boxvault.app.R
 import com.boxvault.app.data.storage.PhotoStorageManager
 
 @Composable
@@ -41,7 +43,7 @@ fun PhotoSlotCard(
     modifier: Modifier = Modifier,
     draftBitmap: Bitmap? = null,
     size: Dp = 80.dp,
-    label: String = "Photo",
+    label: String = stringResource(R.string.photo_slot_label_default),
     onClick: () -> Unit
 ) {
     val hasPhoto = photoRelativePath != null || draftBitmap != null
@@ -84,13 +86,13 @@ fun PhotoSlotCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.AddAPhoto,
-                        contentDescription = "Add Photo",
+                        contentDescription = stringResource(R.string.photo_add),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Add Photo",
+                        text = stringResource(R.string.photo_add),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary
@@ -115,7 +117,7 @@ fun PhotoSlotCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = "Change photo",
+                    contentDescription = stringResource(R.string.photo_change),
                     modifier = Modifier.size(12.dp),
                     tint = MaterialTheme.colorScheme.onSurface
                 )

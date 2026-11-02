@@ -1,5 +1,286 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App & Common -->
     <string name="app_name">BoxVault</string>
-</resources>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_save">Save</string>
+    <string name="common_done">Done</string>
+    <string name="common_back">Back</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_remove">Remove</string>
+    <string name="common_close">Close</string>
+    <string name="common_add">Add</string>
+    <string name="common_open">Open</string>
+    <string name="common_all">All</string>
+    <string name="common_none">None</string>
+    <string name="common_qty">Qty: %d</string>
 
+    <!-- BoxVault Header -->
+    <string name="header_return_dashboard">Return to Dashboard</string>
+    <string name="header_logo_content_description">BoxVault Logo</string>
+    <string name="header_tap_for_dashboard">TAP FOR DASHBOARD</string>
+    <string name="header_tagline">100% local offline storage catalog</string>
+
+    <!-- Photo Components & Dialogs -->
+    <string name="photo_add">Add Photo</string>
+    <string name="photo_change">Change photo</string>
+    <string name="photo_delete">Delete photo</string>
+    <string name="photo_missing">Missing photo</string>
+    <string name="photo_attached_cd">Attached local photo</string>
+    <string name="photo_slot_label_default">Photo</string>
+    <string name="photo_source_dialog_title">Select Photo Source</string>
+    <string name="photo_source_take_photo">Take Photo</string>
+    <string name="photo_source_take_photo_desc">Capture new photo with camera</string>
+    <string name="photo_source_gallery">Choose from Gallery</string>
+    <string name="photo_source_gallery_desc">Select photo from local device storage</string>
+    <string name="photo_source_remove">Remove Photo</string>
+    <string name="photo_source_remove_desc">Detach photo from this entry</string>
+
+    <!-- Offline Privacy Policy Dialog -->
+    <string name="privacy_title">100% Offline Privacy Architecture</string>
+    <string name="privacy_summary">BoxVault is engineered from the ground up with zero cloud dependencies. Your inventory data is strictly your property and never leaves your physical device.</string>
+    <string name="privacy_pillar_db_title">100% Local On-Device SQLite Database</string>
+    <string name="privacy_pillar_db_desc">Every box, item quantity, category, and photo reference is stored exclusively in your app-private local Room SQLite database on your device storage.</string>
+    <string name="privacy_pillar_network_title">Zero Network Permissions</string>
+    <string name="privacy_pillar_network_desc">android.permission.INTERNET is strictly removed (tools:node=\"remove\") in AndroidManifest.xml. The Android operating system physically forbids BoxVault from making any outbound network connections.</string>
+    <string name="privacy_pillar_accounts_title">No Accounts, Tracking, or Cloud Sync</string>
+    <string name="privacy_pillar_accounts_desc">No email registrations, no passwords, no cloud accounts, and zero telemetry/analytics SDKs. QR scanner uses bundled offline ML Kit models.</string>
+    <string name="privacy_pillar_backup_title">Private Local SAF Archive Backups</string>
+    <string name="privacy_pillar_backup_desc">Backups are portable .ZIP archives exported strictly through Android\'s Storage Access Framework (SAF) to a local folder or external drive you select.</string>
+    <string name="privacy_understood">Understood</string>
+
+    <!-- Theme & Sensory Dialog -->
+    <string name="theme_dialog_title">Settings &amp; Appearance</string>
+    <string name="theme_palette_section">THEME PALETTE</string>
+    <string name="theme_mode_system">System Default</string>
+    <string name="theme_mode_system_desc">Follow Android system light or dark mode</string>
+    <string name="theme_mode_light">Light Mode</string>
+    <string name="theme_mode_light_desc">High-contrast light industrial utility palette</string>
+    <string name="theme_mode_dark">Dark Mode</string>
+    <string name="theme_mode_dark_desc">High-contrast dark palette for dimly lit basements &amp; garages</string>
+    <string name="theme_sensory_section">SENSORY FEEDBACK</string>
+    <string name="theme_sound_effects">Sound Effects</string>
+    <string name="theme_sound_effects_desc">Audio click &amp; scan chime</string>
+    <string name="theme_haptics">Tactile Haptics</string>
+    <string name="theme_haptics_desc">Haptic buzz on QR scan, rapid add, &amp; quantity step</string>
+
+    <!-- Dashboard Screen -->
+    <string name="dashboard_title">Storage Vault</string>
+    <string name="dashboard_action_privacy">Offline Privacy Policy</string>
+    <string name="dashboard_action_theme">Select Theme Mode</string>
+    <string name="dashboard_action_scan_qr">Scan Box QR Code</string>
+    <string name="dashboard_action_print_pdf">Print QR Label Sheet</string>
+    <string name="dashboard_action_backup_restore">Backup &amp; Restore</string>
+    <string name="dashboard_fab_new_box">New Box</string>
+    <string name="dashboard_search_placeholder">Search any item, box code, location, or note...</string>
+    <string name="dashboard_search_content_desc">Global Search</string>
+    <string name="dashboard_search_clear">Clear search</string>
+    <string name="dashboard_room_create_title">Create New Room</string>
+    <string name="dashboard_room_create_button">Create Room</string>
+    <string name="dashboard_room_edit_title">Edit Room</string>
+    <string name="dashboard_room_save_changes">Save Changes</string>
+    <string name="dashboard_room_delete_title">Delete Room?</string>
+    <string name="dashboard_room_delete_message">Are you sure you want to delete \"%s\"? All child boxes will be safely preserved as unassigned boxes.</string>
+    <string name="dashboard_room_delete_confirm">Delete Room</string>
+    <string name="dashboard_stat_rooms">ROOMS</string>
+    <string name="dashboard_stat_boxes">BOXES</string>
+    <string name="dashboard_stat_total_items">TOTAL ITEMS</string>
+    <string name="dashboard_stat_unique_entries">UNIQUE ENTRIES</string>
+    <string name="dashboard_quick_add_room">+ Room</string>
+    <string name="dashboard_quick_scan_qr">Scan QR</string>
+    <string name="dashboard_quick_print_sheet">Print QR Sheet</string>
+    <string name="dashboard_quick_backup_zip">Backup ZIP</string>
+    <string name="dashboard_room_counts">%1$d boxes • %2$d items</string>
+    <string name="dashboard_room_collapse">Collapse Room</string>
+    <string name="dashboard_room_expand">Expand Room</string>
+    <string name="dashboard_room_edit">Edit Room</string>
+    <string name="dashboard_room_delete">Delete Room</string>
+    <string name="dashboard_room_empty">No boxes assigned to this room yet.</string>
+    <string name="dashboard_unassigned_title">Unassigned / General</string>
+    <string name="dashboard_unassigned_counts">%1$d boxes • %2$d items (no room assigned)</string>
+    <string name="dashboard_unassigned_collapse">Collapse Unassigned</string>
+    <string name="dashboard_unassigned_expand">Expand Unassigned</string>
+    <string name="dashboard_filter_all_locations">All Locations</string>
+    <string name="dashboard_box_quick_bulk">Bulk +</string>
+    <string name="dashboard_box_fast_bulk_desc">Fast Bulk Entry</string>
+    <string name="dashboard_box_items_count">%1$d items (%2$d types)</string>
+    <string name="dashboard_search_results_title">Instant Search Results for \"%s\"</string>
+    <string name="dashboard_search_no_results">No matching items or boxes found</string>
+    <string name="dashboard_search_no_results_hint">Try searching by item name, box code (e.g. BOX-001), or shelf location.</string>
+    <string name="dashboard_search_matching_items">MATCHING ITEMS (%d)</string>
+    <string name="dashboard_search_matching_boxes">MATCHING BOXES (%d)</string>
+    <string name="dashboard_item_qty">Qty: %d</string>
+    <string name="dashboard_empty_title">No Storage Boxes Cataloged Yet</string>
+    <string name="dashboard_empty_desc">Create your first box, organize with rooms, print QR labels, and use Fast Bulk Entry to catalog items in seconds.</string>
+    <string name="dashboard_empty_create_box">Create First Box</string>
+    <string name="dashboard_empty_create_room">Create First Room</string>
+    <string name="dashboard_empty_no_boxes_in_location">No boxes in \"%s\"</string>
+    <string name="dashboard_empty_show_all_locations">Show All Locations</string>
+
+    <!-- Box Detail Screen -->
+    <string name="box_detail_title_fallback">Box Detail</string>
+    <string name="box_detail_loading">Loading...</string>
+    <string name="box_detail_view_qr">View QR Code</string>
+    <string name="box_detail_print_qr">Print QR Label</string>
+    <string name="box_detail_edit_box">Edit Box</string>
+    <string name="box_detail_delete_box">Delete Box</string>
+    <string name="box_detail_not_found">Box not found.</string>
+    <string name="box_detail_select_box_photo">Select Box Photo</string>
+    <string name="box_detail_select_photo_for_item">Select Photo for %s</string>
+    <string name="box_detail_item_photo">Item Photo</string>
+    <string name="box_detail_add_box_photo">Add Box Photo</string>
+    <string name="box_detail_total_qty_unique">• %1$d total qty (%2$d unique)</string>
+    <string name="box_detail_qr_tap_enlarge_cd">Tap to enlarge QR code</string>
+    <string name="box_detail_qr_tap_enlarge">Tap to Enlarge / Print QR Label</string>
+    <string name="box_detail_qr_code_for">High-contrast QR code for %s</string>
+    <string name="box_detail_qr_permanent_info">This QR code encodes the immutable box UUID. You can rename or move %s at any time without ever re-printing this sticker.</string>
+    <string name="box_detail_print_on_pdf">Print on PDF Sheet</string>
+    <string name="box_detail_box_photos_header">BOX PHOTOS (%d)</string>
+    <string name="box_detail_photo_camera">Camera</string>
+    <string name="box_detail_photo_gallery">Gallery</string>
+    <string name="box_detail_items_in_box_header">ITEMS IN BOX (%d total)</string>
+    <string name="box_detail_add_single_item">Add 1 Item</string>
+    <string name="box_detail_filter_items_placeholder">Filter items inside %s...</string>
+    <string name="box_detail_empty_box">This box is currently empty</string>
+    <string name="box_detail_no_items_match">No items match \"%s\"</string>
+    <string name="box_detail_start_fast_bulk">Start Fast Bulk Entry</string>
+    <string name="box_detail_decrease_qty">Decrease quantity</string>
+    <string name="box_detail_increase_qty">Increase quantity</string>
+    <string name="box_detail_item_photo_count">Photo (%d)</string>
+    <string name="box_detail_item_photo_btn">Photo</string>
+    <string name="box_detail_camera_perm_title">Camera Permission Required</string>
+    <string name="box_detail_camera_perm_desc">BoxVault requires camera access to capture photos of your boxes and items locally. Camera frames are processed entirely on your device and are never shared.\n\nYou can also choose an existing photo from your local gallery instead.</string>
+    <string name="box_detail_camera_perm_gallery">Choose from Gallery</string>
+    <string name="box_detail_delete_box_title">Delete %1$s (%2$s)?</string>
+    <string name="box_detail_delete_box_message">This will permanently delete this box, all %d item entries inside it, and any attached local photos.</string>
+    <string name="box_detail_delete_box_confirm">Delete Box</string>
+    <string name="box_detail_add_item_title">Add Item to Box</string>
+    <string name="box_detail_edit_item_title">Edit Item</string>
+    <string name="box_detail_item_name_label">Item Name *</string>
+    <string name="box_detail_item_qty_label">Quantity</string>
+    <string name="box_detail_item_cat_label">Category</string>
+    <string name="box_detail_item_notes_label">Notes</string>
+
+    <!-- Box Edit Screen -->
+    <string name="box_edit_title_edit">Edit Storage Box</string>
+    <string name="box_edit_title_assign_qr">Assign Pre-Printed QR Label</string>
+    <string name="box_edit_title_new">New Storage Box</string>
+    <string name="box_edit_save_box">Save Box</string>
+    <string name="box_edit_preprinted_title">Unassigned Pre-Printed QR Sticker Detected</string>
+    <string name="box_edit_preprinted_desc">Saving this box binds it permanently to the scanned QR code (%s…).</string>
+    <string name="box_edit_qr_preview_cd">QR Code Preview</string>
+    <string name="box_edit_immutable_qr_title">Immutable QR Payload (Safe to Rename/Move Box)</string>
+    <string name="box_edit_short_code_label">Box Short Code *</string>
+    <string name="box_edit_short_code_placeholder">BOX-001</string>
+    <string name="box_edit_auto_code">Auto Code</string>
+    <string name="box_edit_auto_code_desc">Auto-generate next code</string>
+    <string name="box_edit_name_label">Box Name *</string>
+    <string name="box_edit_name_placeholder">e.g., Power Tools &amp; Drill Bits</string>
+    <string name="box_edit_room_section">Assigned Room / Area</string>
+    <string name="box_edit_new_room_btn">+ New Room</string>
+    <string name="box_edit_room_unassigned">None (Unassigned)</string>
+    <string name="box_edit_location_label">Storage Location / Shelf (within Room)</string>
+    <string name="box_edit_location_placeholder">e.g., Garage Rack B, Shelf 2</string>
+    <string name="box_edit_category_label">Category</string>
+    <string name="box_edit_color_tag">Color Tag</string>
+    <string name="box_edit_notes_label">Notes (Optional)</string>
+    <string name="box_edit_notes_placeholder">Heavy bin, fragile contents, seasonal notes...</string>
+    <string name="box_edit_save_changes">Save Changes</string>
+    <string name="box_edit_create_box">Create Box</string>
+    <string name="room_create_title_default">Create New Room</string>
+    <string name="room_create_btn_default">Create Room</string>
+    <string name="room_create_name_label">Room / Area Name *</string>
+    <string name="room_create_name_placeholder">e.g., Garage, Attic, Living Room</string>
+    <string name="room_create_color_accent">Room Color Accent</string>
+    <string name="room_create_error_required">Room name is required.</string>
+
+    <!-- Bulk Entry Screen -->
+    <string name="bulk_entry_fast_mode_title">Fast Bulk Item Entry Mode</string>
+    <string name="bulk_entry_fast_mode_desc">Rapidly catalog items into %s without the keyboard ever closing.</string>
+    <string name="bulk_entry_bulk_add_btn">Bulk Add</string>
+    <string name="bulk_entry_title">Fast Bulk Entry • %s</string>
+    <string name="bulk_entry_subtitle">%1$s (%2$d items total)</string>
+    <string name="bulk_entry_input_label">Type item name &amp; press Next / Enter</string>
+    <string name="bulk_entry_input_placeholder">e.g., Cordless Impact Driver</string>
+    <string name="bulk_entry_add_item_desc">Add Item</string>
+    <string name="bulk_entry_add_btn">Add</string>
+    <string name="bulk_entry_qty_label">Qty:</string>
+    <string name="bulk_entry_note_chip">Note</string>
+    <string name="bulk_entry_note_label">Optional item note (resets after each add)</string>
+    <string name="bulk_entry_session_header">ADDED THIS SESSION (%d)</string>
+    <string name="bulk_entry_last_saved">Last saved: %s</string>
+    <string name="bulk_entry_empty_hint">Type an item name above and hit Next/Enter on your keyboard. The keyboard stays open so you can add dozens of items in seconds.</string>
+    <string name="bulk_entry_item_qty_cat">Qty: %1$d • %2$s</string>
+    <string name="bulk_entry_bump_qty">+1</string>
+    <string name="bulk_entry_undo_desc">Undo item</string>
+    <string name="bulk_entry_undo_btn">Undo</string>
+
+    <!-- PDF Generator Screen -->
+    <string name="pdf_title">Printable QR Label Sheets</string>
+    <string name="pdf_subtitle">%1$d labels • %2$d page(s) (%3$s)</string>
+    <string name="pdf_save_btn">Save PDF</string>
+    <string name="pdf_section_mode">1. Label Generation Mode</string>
+    <string name="pdf_mode_existing_boxes">Existing Boxes (%d)</string>
+    <string name="pdf_mode_blank_stickers">Pre-Allocated Blank Stickers</string>
+    <string name="pdf_mode_existing_desc">Print QR labels for boxes already cataloged in your local database.</string>
+    <string name="pdf_mode_blank_desc">Print a sheet of unassigned QR labels with write-in lines now. When you stick one on a box later and scan it, BoxVault automatically opens New Box setup with that exact QR UUID.</string>
+    <string name="pdf_section_layout">2. Sheet Layout &amp; Grid Preset</string>
+    <string name="pdf_paper_size_label">Paper Size:</string>
+    <string name="pdf_cut_guides_title">Dashed Cut Guides</string>
+    <string name="pdf_cut_guides_desc">Crisp nearest-neighbor QR rendering + white quiet zone always enabled</string>
+    <string name="pdf_section_blank_qty">3. Pre-Allocated Blank Sheet Quantity</string>
+    <string name="pdf_new_uuids_btn">New UUIDs</string>
+    <string name="pdf_blank_count_option">%1$d labels (%2$d pg)</string>
+    <string name="pdf_blank_range_desc">Pre-allocated range: %1$s → %2$s (%3$d unique boxvault://box/&lt;uuid&gt; labels)</string>
+    <string name="pdf_section_select_boxes">3. Select Boxes to Print (%1$d/%2$d)</string>
+    <string name="pdf_select_all">All</string>
+    <string name="pdf_select_none">None</string>
+    <string name="pdf_no_boxes">No boxes in database yet.</string>
+    <string name="pdf_switch_to_blank">Switch to Pre-Allocated Blank Labels</string>
+    <string name="pdf_no_location">No location set</string>
+    <string name="pdf_export_btn">Export Printable PDF (%d Labels)</string>
+    <string name="pdf_preset_large_title">2 × 4 Large Carton Labels</string>
+    <string name="pdf_preset_large_desc">8 labels/page — heavy-duty storage totes &amp; moving cartons</string>
+    <string name="pdf_preset_medium_title">3 × 7 Medium Box Labels</string>
+    <string name="pdf_preset_medium_desc">21 labels/page — standard archive &amp; shelf boxes</string>
+    <string name="pdf_preset_small_title">4 × 10 Small Bin Labels</string>
+    <string name="pdf_preset_small_desc">40 labels/page — hardware drawers, parts bins &amp; organizers</string>
+    <string name="pdf_page_size_a4">A4 (210 × 297 mm)</string>
+    <string name="pdf_page_size_us_letter">US Letter (8.5 × 11 in)</string>
+
+    <!-- Backup & Restore Screen -->
+    <string name="backup_title">Local ZIP Backup &amp; Restore</string>
+    <string name="backup_subtitle">100% Offline SAF Archive • SHA-256 &amp; Zip-Slip Protected</string>
+    <string name="backup_processing_staging">Processing archive in isolated staging directory...</string>
+    <string name="backup_inventory_title">Current On-Device Vault Inventory</string>
+    <string name="backup_inventory_counts">%1$d Boxes • %2$d Unique Items (%3$d Total Qty)</string>
+    <string name="backup_inventory_desc">All photos are downsampled to max 1600px (80% JPEG) with normalized EXIF orientation for compact archives.</string>
+    <string name="backup_export_title">Export Portable .ZIP Backup</string>
+    <string name="backup_export_desc">Includes backup_manifest.json + all photos with SHA-256 checksums</string>
+    <string name="backup_export_btn">Export .ZIP Archive via SAF</string>
+    <string name="backup_restore_title">Restore from Local .ZIP Archive</string>
+    <string name="backup_restore_desc">Extracts &amp; verifies inside cacheDir/restore_staging before touching live data</string>
+    <string name="backup_restore_btn">Select .ZIP Backup to Restore</string>
+    <string name="backup_security_title">Cryptographic &amp; Archive Security Guarantees</string>
+    <string name="backup_sec_zipslip_title">Strict Zip-Slip Path Traversal Defense</string>
+    <string name="backup_sec_zipslip_desc">Every ZipEntry is canonically validated inside cacheDir/restore_staging. Entries containing \'..\' or escaping the staging root throw SecurityException.</string>
+    <string name="backup_sec_sha_title">Atomic Staged SHA-256 Verification</string>
+    <string name="backup_sec_sha_desc">Every staged photo is hashed with SHA-256 and verified against backup_manifest.json before any live Room row or photo file is overwritten.</string>
+    <string name="backup_sec_cloud_title">Zero Cloud / Zero Network Permissions</string>
+    <string name="backup_sec_cloud_desc">android:allowBackup=\"false\" and tools:node=\"remove\" on INTERNET ensure backups only move where you explicitly save them via Android SAF.</string>
+    <string name="backup_dialog_title">Restore Backup Archive?</string>
+    <string name="backup_dialog_message">BoxVault will first extract and verify all SHA-256 photo checksums inside an isolated staging folder. Only if 100% of integrity checks pass will your current on-device inventory be replaced.</string>
+    <string name="backup_dialog_confirm">Verify &amp; Restore</string>
+
+    <!-- QR Scanner Screen -->
+    <string name="scanner_title">Scan Box QR Label</string>
+    <string name="scanner_subtitle">100% Offline Bundled ML Kit Scanner</string>
+    <string name="scanner_toggle_torch">Toggle Flashlight</string>
+    <string name="scanner_reticle_hint">Point at any BoxVault QR code — existing boxes open immediately; blank pre-printed labels open New Box setup.</string>
+    <string name="scanner_camera_perm_title">Camera Permission Required for Live QR Scanning</string>
+    <string name="scanner_camera_perm_desc">Camera frames are analyzed strictly on-device using bundled ML Kit and never leave your phone.</string>
+    <string name="scanner_grant_perm_btn">Grant Camera Permission</string>
+    <string name="scanner_manual_title">Manual Short Code / QR Lookup</string>
+    <string name="scanner_manual_placeholder">e.g. BOX-001 or boxvault://box/...</string>
+    <string name="scanner_manual_open_btn">Open</string>
+</resources>

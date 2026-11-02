@@ -64,6 +64,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+import com.boxvault.app.R
 import com.boxvault.app.data.preferences.UserPreferencesManager
 import com.boxvault.app.util.sensory.SensoryFeedbackManager
 import androidx.compose.ui.text.font.FontWeight
@@ -142,11 +144,11 @@ fun QrScannerScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Scan Box QR Label",
+                            text = stringResource(R.string.scanner_title),
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "100% Offline Bundled ML Kit Scanner",
+                            text = stringResource(R.string.scanner_subtitle),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.secondary
                         )
@@ -156,7 +158,7 @@ fun QrScannerScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.common_back)
                         )
                     }
                 },
@@ -175,7 +177,7 @@ fun QrScannerScreen(
                                 } else {
                                     Icons.Default.FlashOff
                                 },
-                                contentDescription = "Toggle Flashlight",
+                                contentDescription = stringResource(R.string.scanner_toggle_torch),
                                 tint = if (uiState.isTorchEnabled) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
@@ -223,7 +225,7 @@ fun QrScannerScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "Point at any BoxVault QR code — existing boxes open immediately; blank pre-printed labels open New Box setup.",
+                            text = stringResource(R.string.scanner_reticle_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
@@ -242,13 +244,13 @@ fun QrScannerScreen(
                             modifier = Modifier.size(48.dp)
                         )
                         Text(
-                            text = "Camera Permission Required for Live QR Scanning",
+                            text = stringResource(R.string.scanner_camera_perm_title),
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Camera frames are analyzed strictly on-device using bundled ML Kit and never leave your phone.",
+                            text = stringResource(R.string.scanner_camera_perm_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.8f)
                         )
@@ -257,7 +259,7 @@ fun QrScannerScreen(
                         ) {
                             Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Grant Camera Permission")
+                            Text(stringResource(R.string.scanner_grant_perm_btn))
                         }
                     }
                 }
@@ -294,7 +296,7 @@ fun QrScannerScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Manual Short Code / QR Lookup",
+                        text = stringResource(R.string.scanner_manual_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -307,7 +309,7 @@ fun QrScannerScreen(
                         OutlinedTextField(
                             value = uiState.manualInput,
                             onValueChange = viewModel::onManualInputChange,
-                            placeholder = { Text("e.g. BOX-001 or boxvault://box/...") },
+                            placeholder = { Text(stringResource(R.string.scanner_manual_placeholder)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(
@@ -321,7 +323,7 @@ fun QrScannerScreen(
                         ) {
                             Icon(imageVector = Icons.Default.Search, contentDescription = null)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Open")
+                            Text(stringResource(R.string.scanner_manual_open_btn))
                         }
                     }
                 }

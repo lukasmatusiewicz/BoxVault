@@ -32,8 +32,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.boxvault.app.R
 import com.boxvault.app.data.preferences.ThemeMode
 
 @Composable
@@ -50,7 +52,7 @@ fun ThemeSelectionDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Settings & Appearance",
+                text = stringResource(R.string.theme_dialog_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -63,15 +65,15 @@ fun ThemeSelectionDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "THEME PALETTE",
+                    text = stringResource(R.string.theme_palette_section),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
 
                 ThemeOptionRow(
-                    label = "System Default",
-                    description = "Follow Android system light or dark mode",
+                    label = stringResource(R.string.theme_mode_system),
+                    description = stringResource(R.string.theme_mode_system_desc),
                     icon = Icons.Default.BrightnessAuto,
                     isSelected = currentThemeMode == ThemeMode.SYSTEM,
                     onClick = {
@@ -79,8 +81,8 @@ fun ThemeSelectionDialog(
                     }
                 )
                 ThemeOptionRow(
-                    label = "Light Mode",
-                    description = "High-contrast light industrial utility palette",
+                    label = stringResource(R.string.theme_mode_light),
+                    description = stringResource(R.string.theme_mode_light_desc),
                     icon = Icons.Default.LightMode,
                     isSelected = currentThemeMode == ThemeMode.LIGHT,
                     onClick = {
@@ -88,8 +90,8 @@ fun ThemeSelectionDialog(
                     }
                 )
                 ThemeOptionRow(
-                    label = "Dark Mode",
-                    description = "High-contrast dark palette for dimly lit basements & garages",
+                    label = stringResource(R.string.theme_mode_dark),
+                    description = stringResource(R.string.theme_mode_dark_desc),
                     icon = Icons.Default.DarkMode,
                     isSelected = currentThemeMode == ThemeMode.DARK,
                     onClick = {
@@ -103,7 +105,7 @@ fun ThemeSelectionDialog(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "SENSORY FEEDBACK",
+                        text = stringResource(R.string.theme_sensory_section),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.secondary,
                         fontWeight = FontWeight.Bold
@@ -135,12 +137,12 @@ fun ThemeSelectionDialog(
                                     )
                                     Column {
                                         Text(
-                                            text = "Sound Effects",
+                                            text = stringResource(R.string.theme_sound_effects),
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = "Audio click & scan chime",
+                                            text = stringResource(R.string.theme_sound_effects_desc),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -180,12 +182,12 @@ fun ThemeSelectionDialog(
                                     )
                                     Column {
                                         Text(
-                                            text = "Tactile Haptics",
+                                            text = stringResource(R.string.theme_haptics),
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = "Haptic buzz on QR scan, rapid add, & quantity step",
+                                            text = stringResource(R.string.theme_haptics_desc),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -203,7 +205,7 @@ fun ThemeSelectionDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Done")
+                Text(stringResource(R.string.common_done))
             }
         }
     )

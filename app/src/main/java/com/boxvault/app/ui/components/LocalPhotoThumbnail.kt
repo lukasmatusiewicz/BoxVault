@@ -25,8 +25,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.boxvault.app.R
 import com.boxvault.app.data.storage.PhotoStorageManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -48,7 +50,7 @@ fun LocalPhotoThumbnail(
     photoStorageManager: PhotoStorageManager,
     modifier: Modifier = Modifier,
     size: Dp = 88.dp,
-    contentDescription: String? = "Attached local photo",
+    contentDescription: String? = stringResource(R.string.photo_attached_cd),
     onDeleteClick: (() -> Unit)? = null
 ) {
     val loadState by produceState<LocalPhotoLoadState>(
@@ -114,7 +116,7 @@ fun LocalPhotoThumbnail(
             is LocalPhotoLoadState.Error -> {
                 Icon(
                     imageVector = Icons.Default.BrokenImage,
-                    contentDescription = "Missing photo",
+                    contentDescription = stringResource(R.string.photo_missing),
                     tint = MaterialTheme.colorScheme.error
                 )
             }
@@ -134,7 +136,7 @@ fun LocalPhotoThumbnail(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Delete photo",
+                    contentDescription = stringResource(R.string.photo_delete),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(16.dp)
                 )

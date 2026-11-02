@@ -31,8 +31,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.boxvault.app.R
 
 @Composable
 fun PrivacyPolicyDialog(
@@ -50,7 +52,7 @@ fun PrivacyPolicyDialog(
         },
         title = {
             Text(
-                text = "100% Offline Privacy Architecture",
+                text = stringResource(R.string.privacy_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -63,33 +65,33 @@ fun PrivacyPolicyDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "BoxVault is engineered from the ground up with zero cloud dependencies. Your inventory data is strictly your property and never leaves your physical device.",
+                    text = stringResource(R.string.privacy_summary),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 PrivacyPillarCard(
                     icon = Icons.Default.Storage,
-                    title = "100% Local On-Device SQLite Database",
-                    description = "Every box, item quantity, category, and photo reference is stored exclusively in your app-private local Room SQLite database on your device storage."
+                    title = stringResource(R.string.privacy_pillar_db_title),
+                    description = stringResource(R.string.privacy_pillar_db_desc)
                 )
 
                 PrivacyPillarCard(
                     icon = Icons.Default.CloudOff,
-                    title = "Zero Network Permissions",
-                    description = "android.permission.INTERNET is strictly removed (tools:node=\"remove\") in AndroidManifest.xml. The Android operating system physically forbids BoxVault from making any outbound network connections."
+                    title = stringResource(R.string.privacy_pillar_network_title),
+                    description = stringResource(R.string.privacy_pillar_network_desc)
                 )
 
                 PrivacyPillarCard(
                     icon = Icons.Default.NoAccounts,
-                    title = "No Accounts, Tracking, or Cloud Sync",
-                    description = "No email registrations, no passwords, no cloud accounts, and zero telemetry/analytics SDKs. QR scanner uses bundled offline ML Kit models."
+                    title = stringResource(R.string.privacy_pillar_accounts_title),
+                    description = stringResource(R.string.privacy_pillar_accounts_desc)
                 )
 
                 PrivacyPillarCard(
                     icon = Icons.Default.FolderZip,
-                    title = "Private Local SAF Archive Backups",
-                    description = "Backups are portable .ZIP archives exported strictly through Android's Storage Access Framework (SAF) to a local folder or external drive you select."
+                    title = stringResource(R.string.privacy_pillar_backup_title),
+                    description = stringResource(R.string.privacy_pillar_backup_desc)
                 )
             }
         },
@@ -98,7 +100,7 @@ fun PrivacyPolicyDialog(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("Understood")
+                Text(stringResource(R.string.privacy_understood))
             }
         }
     )
