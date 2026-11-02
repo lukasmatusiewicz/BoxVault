@@ -1,3 +1,5 @@
+![BoxVault Banner](docs/assets/banner_hero.png)
+
 # 📦 BoxVault — 100% Offline, High-Security QR Storage & Inventory Catalog for Android
 
 [![Android CI & Security Audit](https://github.com/lukasmatusiewicz/BoxVault/actions/workflows/android-ci.yml/badge.svg)](https://github.com/lukasmatusiewicz/BoxVault/actions/workflows/android-ci.yml)
