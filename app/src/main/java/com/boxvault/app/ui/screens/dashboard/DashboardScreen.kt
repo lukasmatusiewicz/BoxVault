@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -86,6 +87,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import com.boxvault.app.util.sensory.SensoryFeedbackManager
 import com.boxvault.app.data.preferences.ThemeMode
 import com.boxvault.app.data.preferences.UserPreferencesManager
+import com.boxvault.app.ui.components.BoxVaultHeader
 import com.boxvault.app.ui.components.OnboardingDialog
 import com.boxvault.app.ui.components.PrivacyPolicyDialog
 import com.boxvault.app.ui.components.ThemeSelectionDialog
@@ -133,8 +135,6 @@ fun DashboardScreen(
     val hasCompletedOnboarding by resolvedPrefsManager.hasCompletedOnboarding.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
 
-    var showThemeDialog by remember { mutableStateOf(false) }
-    var showPrivacyDialog by remember { mutableStateOf(false) }
     var showCreateRoomDialog by remember { mutableStateOf(false) }
     var editingRoom by remember { mutableStateOf<RoomEntity?>(null) }
     var deletingRoom by remember { mutableStateOf<RoomEntity?>(null) }
@@ -149,28 +149,7 @@ fun DashboardScreen(
     )
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {},
-                actions = {
-                    IconButton(onClick = { showPrivacyDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Security,
-                            contentDescription = stringResource(R.string.dashboard_action_privacy)
-                        )
-                    }
-                    IconButton(onClick = { showThemeDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Palette,
-                            contentDescription = stringResource(R.string.dashboard_action_theme)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             Column(
                 horizontalAlignment = Alignment.End,
@@ -237,7 +216,7 @@ fun DashboardScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             // Instant Global Search Bar
             OutlinedTextField(
@@ -245,7 +224,7 @@ fun DashboardScreen(
                 onValueChange = viewModel::onSearchQueryChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 placeholder = {
                     Text(stringResource(R.string.dashboard_search_placeholder))
                 },
@@ -511,30 +490,6 @@ fun DashboardScreen(
                     Text(stringResource(R.string.common_cancel))
                 }
             }
-        )
-    }
-
-    if (showThemeDialog) {
-        ThemeSelectionDialog(
-            currentThemeMode = currentThemeMode,
-            soundEffectsEnabled = soundEffectsEnabled,
-            hapticsEnabled = hapticsEnabled,
-            onThemeSelected = { mode ->
-                resolvedPrefsManager.setThemeMode(mode)
-            },
-            onSoundEffectsToggled = { enabled ->
-                resolvedPrefsManager.setSoundEffectsEnabled(enabled)
-            },
-            onHapticsToggled = { enabled ->
-                resolvedPrefsManager.setHapticsEnabled(enabled)
-            },
-            onDismiss = { showThemeDialog = false }
-        )
-    }
-
-    if (showPrivacyDialog) {
-        PrivacyPolicyDialog(
-            onDismiss = { showPrivacyDialog = false }
         )
     }
 
