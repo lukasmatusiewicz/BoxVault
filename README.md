@@ -1,5 +1,12 @@
 ![BoxVault Banner](docs/assets/banner_hero.png)
 
+## 📱 App Showcase
+
+| **Dashboard & Room Hub** | **Box Detail & QR Code** | **Fast Bulk Item Entry** | **Printable QR Label Sheets** |
+| :---: | :---: | :---: | :---: |
+| <img src="docs/screenshots/01_dashboard.png" width="240" alt="Dashboard Screen" /> | <img src="docs/screenshots/02_box_detail.png" width="240" alt="Box Detail Screen" /> | <img src="docs/screenshots/03_bulk_entry.png" width="240" alt="Fast Bulk Entry Screen" /> | <img src="docs/screenshots/04_pdf_generator.png" width="240" alt="PDF Label Sheets Screen" /> |
+| Edge-to-edge branding header, 3-card Utility Hub, and collapsible Room sections with live stats | High-visibility photo slots, item inventory counter, and tap-to-enlarge QR preview | Rapid keyboard-friendly cataloging with live "Added This Session" feed | Native vector PDF & Direct Print with presets for A4 & US Letter sheets |
+
 # 📦 BoxVault — 100% Offline, High-Security QR Storage & Inventory Catalog for Android
 
 [![Android CI & Security Audit](https://github.com/lukasmatusiewicz/BoxVault/actions/workflows/android-ci.yml/badge.svg)](https://github.com/lukasmatusiewicz/BoxVault/actions/workflows/android-ci.yml)
