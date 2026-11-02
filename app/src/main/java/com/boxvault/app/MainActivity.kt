@@ -7,7 +7,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.ui.navigation.BoxVaultNavHost
 import com.boxvault.app.ui.theme.BoxVaultTheme
 
@@ -19,7 +21,8 @@ class MainActivity : ComponentActivity() {
         val app = application as BoxVaultApplication
 
         setContent {
-            BoxVaultTheme {
+            val themeMode by app.userPreferencesManager.themeMode.collectAsStateWithLifecycle()
+            BoxVaultTheme(themeMode = themeMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -27,7 +30,9 @@ class MainActivity : ComponentActivity() {
                     BoxVaultNavHost(
                         repository = app.repository,
                         photoStorageManager = app.photoStorageManager,
-                        backupManager = app.backupManager
+                        backupManager = app.backupManager,
+                        userPreferencesManager = app.userPreferencesManager,
+                        sensoryFeedbackManager = app.sensoryFeedbackManager
                     )
                 }
             }

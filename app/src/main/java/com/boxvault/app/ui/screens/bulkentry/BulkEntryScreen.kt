@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Notes
@@ -51,7 +53,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.boxvault.app.data.preferences.UserPreferencesManager
+import com.boxvault.app.util.sensory.SensoryFeedbackManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -59,30 +65,36 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.data.local.entity.ItemEntity
 
+private val QuickQuantityPresets = listOf(1, 2, 5, 10)
 private val BulkQuickCategories = listOf(
     "General",
-    "Tools",
     "Hardware",
-    "Electronics",
-    "Kitchen",
-    "Winter Gear",
-    "Holiday",
-    "Camping"
+    "Tools",
+    "Cables",
+    "Decor",
+    "Winter",
+    "Safety",
+    "Office"
 )
-
-private val QuickQuantityPresets = listOf(1, 2, 3, 4, 5, 10)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BulkEntryScreen(
     viewModel: BulkEntryViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    sensoryFeedbackManager: SensoryFeedbackManager? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val sensoryManager = remember(sensoryFeedbackManager, context) {
+        sensoryFeedbackManager ?: SensoryFeedbackManager(context, UserPreferencesManager(context))
+    }
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val triggerSubmitAndMaintainFocus = {
+        sensoryManager.onBulkEntrySubmit(haptic)
         viewModel.submitCurrentItem()
         runCatching { focusRequester.requestFocus() }
         keyboardController?.show()
@@ -167,6 +179,7 @@ fun BulkEntryScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -227,6 +240,7 @@ fun BulkEntryScreen(
                             )
                             FilledIconButton(
                                 onClick = {
+                                    sensoryManager.onQuantityStep(haptic)
                                     viewModel.decrementDraftQuantity()
                                     runCatching { focusRequester.requestFocus() }
                                 },
@@ -251,6 +265,7 @@ fun BulkEntryScreen(
                             )
                             FilledIconButton(
                                 onClick = {
+                                    sensoryManager.onQuantityStep(haptic)
                                     viewModel.incrementDraftQuantity()
                                     runCatching { focusRequester.requestFocus() }
                                 },
@@ -274,6 +289,7 @@ fun BulkEntryScreen(
                                 FilterChip(
                                     selected = uiState.quantityInput == preset,
                                     onClick = {
+                                        sensoryManager.onQuantityStep(haptic)
                                         viewModel.onQuantityChange(preset)
                                         runCatching { focusRequester.requestFocus() }
                                     },
@@ -361,7 +377,7 @@ fun BulkEntryScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 48.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (uiState.sessionAddedItems.isEmpty()) {
@@ -386,11 +402,14 @@ fun BulkEntryScreen(
                     ) { sessionItem ->
                         SessionAddedItemRow(
                             item = sessionItem,
+                            modifier = Modifier.animateItem(),
                             onBumpQuantity = {
+                                sensoryManager.onQuantityStep(haptic)
                                 viewModel.bumpSessionItemQuantity(sessionItem.id)
                                 runCatching { focusRequester.requestFocus() }
                             },
                             onUndo = {
+                                sensoryManager.onDeleteAction(haptic)
                                 viewModel.undoSessionItem(sessionItem.id)
                                 runCatching { focusRequester.requestFocus() }
                             }
@@ -405,11 +424,12 @@ fun BulkEntryScreen(
 @Composable
 private fun SessionAddedItemRow(
     item: ItemEntity,
+    modifier: Modifier = Modifier,
     onBumpQuantity: () -> Unit,
     onUndo: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface

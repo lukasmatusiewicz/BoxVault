@@ -18,14 +18,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -71,6 +74,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.boxvault.app.data.preferences.UserPreferencesManager
+import com.boxvault.app.util.sensory.SensoryFeedbackManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -98,10 +104,15 @@ fun BoxDetailScreen(
     onNavigateBack: () -> Unit,
     onNavigateToEditBox: (String) -> Unit,
     onNavigateToBulkEntry: (String) -> Unit,
-    onNavigateToPrintQr: (String) -> Unit
+    onNavigateToPrintQr: (String) -> Unit,
+    sensoryFeedbackManager: SensoryFeedbackManager? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val sensoryManager = remember(sensoryFeedbackManager, context) {
+        sensoryFeedbackManager ?: SensoryFeedbackManager(context, UserPreferencesManager(context))
+    }
 
     var showAddOrEditItemDialog by remember { mutableStateOf(false) }
     var itemBeingEdited by remember { mutableStateOf<ItemEntity?>(null) }
@@ -304,8 +315,9 @@ fun BoxDetailScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
+                .padding(innerPadding)
+                .imePadding(),
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             if (box != null) {
@@ -341,7 +353,10 @@ fun BoxDetailScreen(
                             pendingPhotoTargetItemId = null
                             pickImageLauncher.launch("image/*")
                         },
-                        onDeletePhoto = viewModel::deletePhoto
+                        onDeletePhoto = { photoId ->
+                                sensoryManager.onDeleteAction(haptic)
+                                viewModel.deletePhoto(photoId)
+                            }
                     )
                 }
 
@@ -436,17 +451,29 @@ fun BoxDetailScreen(
                         BoxItemRowCard(
                             itemWithPhotos = itemWithPhotos,
                             photoStorageManager = photoStorageManager,
-                            onIncrement = { viewModel.incrementItemQuantity(itemWithPhotos.item) },
-                            onDecrement = { viewModel.decrementItemQuantity(itemWithPhotos.item) },
+                            onIncrement = {
+                                sensoryManager.onQuantityStep(haptic)
+                                viewModel.incrementItemQuantity(itemWithPhotos.item)
+                            },
+                            onDecrement = {
+                                sensoryManager.onQuantityStep(haptic)
+                                viewModel.decrementItemQuantity(itemWithPhotos.item)
+                            },
                             onEdit = {
                                 itemBeingEdited = itemWithPhotos.item
                                 draftItemPhotoBitmap = null
                                 draftItemPhotoBytes = null
                                 showAddOrEditItemDialog = true
                             },
-                            onDelete = { viewModel.deleteItem(itemWithPhotos.item.id) },
+                            onDelete = {
+                                sensoryManager.onDeleteAction(haptic)
+                                viewModel.deleteItem(itemWithPhotos.item.id)
+                            },
                             onPhotoSlotClick = { openItemPhotoSelection(itemWithPhotos) },
-                            onDeletePhoto = viewModel::deletePhoto
+                            onDeletePhoto = { photoId ->
+                                sensoryManager.onDeleteAction(haptic)
+                                viewModel.deletePhoto(photoId)
+                            }
                         )
                     }
                 }
@@ -477,6 +504,7 @@ fun BoxDetailScreen(
             },
             onPhotoSlotClick = openItemEditPhotoSelection,
             onConfirm = { name, qty, category, notes, draftBytes ->
+                sensoryManager.onBulkEntrySubmit(haptic)
                 viewModel.saveItem(
                     name = name,
                     quantity = qty,
@@ -569,6 +597,7 @@ fun BoxDetailScreen(
                 Button(
                     onClick = {
                         showDeleteBoxConfirm = false
+                        sensoryManager.onDeleteAction(haptic)
                         viewModel.deleteBox(onDeleted = onNavigateBack)
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -801,7 +830,9 @@ private fun QrCodePreviewDialog(
         },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -1145,7 +1176,10 @@ private fun ItemEditDialog(
         },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .imePadding(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // Dedicated prominent Photo Slot for Item

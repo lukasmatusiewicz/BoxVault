@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -118,7 +119,8 @@ fun BackupRestoreScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .imePadding()
+                .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (uiState.isWorking) {
@@ -359,9 +361,11 @@ fun BackupRestoreScreen(
             onDismissRequest = { pendingRestoreUri = null },
             title = { Text("Restore Backup Archive?") },
             text = {
-                Text(
-                    "BoxVault will first extract and verify all SHA-256 photo checksums inside an isolated staging folder. Only if 100% of integrity checks pass will your current on-device inventory be replaced."
-                )
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        "BoxVault will first extract and verify all SHA-256 photo checksums inside an isolated staging folder. Only if 100% of integrity checks pass will your current on-device inventory be replaced."
+                    )
+                }
             },
             confirmButton = {
                 Button(
@@ -423,4 +427,3 @@ private fun SecurityBulletRow(
         }
     }
 }
-
