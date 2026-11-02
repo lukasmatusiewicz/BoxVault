@@ -90,6 +90,17 @@
     <string name="dashboard_quick_scan_qr">Scan QR</string>
     <string name="dashboard_quick_print_sheet">Print QR Sheet</string>
     <string name="dashboard_quick_backup_zip">Backup ZIP</string>
+    <string name="dashboard_hub_scan_qr">Scan QR Code</string>
+    <string name="dashboard_hub_print_sheet">Print QR Sheet</string>
+    <string name="dashboard_hub_backup_zip">Backup .ZIP</string>
+    <string name="dashboard_speed_dial_open">Open quick actions</string>
+    <string name="dashboard_speed_dial_close">Close quick actions</string>
+    <string name="dashboard_speed_dial_new_box">New Box</string>
+    <string name="dashboard_speed_dial_new_room">New Room</string>
+    <string name="dashboard_move_to_room_title">Move Box to Room</string>
+    <string name="dashboard_move_to_room_subtitle">Select a destination for \"%s\"</string>
+    <string name="dashboard_move_to_room_unassigned">Unassigned / No Room</string>
+    <string name="dashboard_move_to_room_new_room">+ Create New Room</string>
     <string name="dashboard_room_counts">%1$d boxes • %2$d items</string>
     <string name="dashboard_room_collapse">Collapse Room</string>
     <string name="dashboard_room_expand">Expand Room</string>
@@ -239,6 +250,8 @@
     <string name="pdf_switch_to_blank">Switch to Pre-Allocated Blank Labels</string>
     <string name="pdf_no_location">No location set</string>
     <string name="pdf_export_btn">Export Printable PDF (%d Labels)</string>
+    <string name="pdf_direct_print_btn">Direct Print</string>
+    <string name="pdf_print_job_title">BoxVault QR Labels</string>
     <string name="pdf_preset_large_title">2 × 4 Large Carton Labels</string>
     <string name="pdf_preset_large_desc">8 labels/page — heavy-duty storage totes &amp; moving cartons</string>
     <string name="pdf_preset_medium_title">3 × 7 Medium Box Labels</string>
@@ -283,4 +296,21 @@
     <string name="scanner_manual_title">Manual Short Code / QR Lookup</string>
     <string name="scanner_manual_placeholder">e.g. BOX-001 or boxvault://box/...</string>
     <string name="scanner_manual_open_btn">Open</string>
+
+    <!-- Photo Source Camera Permission Dialog -->
+    <string name="photo_camera_perm_dialog_title">Camera Permission Required</string>
+    <string name="photo_camera_perm_dialog_desc">BoxVault needs camera access to take photos of your boxes and items. You can grant access or select an existing photo from your gallery.</string>
+    <string name="photo_camera_perm_retry">Grant Permission</string>
+    <string name="photo_camera_perm_gallery">Choose from Gallery</string>
+
+    <!-- Onboarding Dialog -->
+    <string name="onboarding_title">Welcome to BoxVault</string>
+    <string name="onboarding_subtitle">Your 100% offline personal storage vault &amp; physical inventory manager.</string>
+    <string name="onboarding_feature_rooms_title">Room &amp; Location Grouping</string>
+    <string name="onboarding_feature_rooms_desc">Organize boxes into custom rooms like Garage, Attic, or Living Room with vibrant color badges.</string>
+    <string name="onboarding_feature_qr_title">Printable QR Code Labels</string>
+    <string name="onboarding_feature_qr_desc">Generate and print high-contrast QR label sheets directly to your printer or export to PDF.</string>
+    <string name="onboarding_feature_privacy_title">100% Offline &amp; Private</string>
+    <string name="onboarding_feature_privacy_desc">Zero cloud tracking, zero network permissions. Your inventory stays completely on your device.</string>
+    <string name="onboarding_get_started">Get Started</string>
 </resources>

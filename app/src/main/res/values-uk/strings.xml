@@ -90,6 +90,17 @@
     <string name="dashboard_quick_scan_qr">Сканувати QR</string>
     <string name="dashboard_quick_print_sheet">Друк QR</string>
     <string name="dashboard_quick_backup_zip">Копія ZIP</string>
+    <string name="dashboard_hub_scan_qr">Сканувати QR-код</string>
+    <string name="dashboard_hub_print_sheet">Друк аркуша QR</string>
+    <string name="dashboard_hub_backup_zip">Резервна копія .ZIP</string>
+    <string name="dashboard_speed_dial_open">Відкрити швидкі дії</string>
+    <string name="dashboard_speed_dial_close">Закрити швидкі дії</string>
+    <string name="dashboard_speed_dial_new_box">Нова коробка</string>
+    <string name="dashboard_speed_dial_new_room">Нова кімната</string>
+    <string name="dashboard_move_to_room_title">Перемістити коробку в кімнату</string>
+    <string name="dashboard_move_to_room_subtitle">Виберіть місце для \"%s\"</string>
+    <string name="dashboard_move_to_room_unassigned">Не призначено / Без кімнати</string>
+    <string name="dashboard_move_to_room_new_room">+ Створити нову кімнату</string>
     <string name="dashboard_room_counts">%1$d коробок • %2$d речей</string>
     <string name="dashboard_room_collapse">Згорнути кімнату</string>
     <string name="dashboard_room_expand">Розгорнути кімнату</string>
@@ -239,6 +250,8 @@
     <string name="pdf_switch_to_blank">Перемкнутися на порожні етикетки</string>
     <string name="pdf_no_location">Локація не вказана</string>
     <string name="pdf_export_btn">Експортувати аркуш PDF (%d етикеток)</string>
+    <string name="pdf_direct_print_btn">Прямий друк</string>
+    <string name="pdf_print_job_title">Етикетки QR BoxVault</string>
     <string name="pdf_preset_large_title">2 × 4 Великі етикетки для коробок</string>
     <string name="pdf_preset_large_desc">8 етикеток/стор — міцні пластикові бокси та коробки для переїзду</string>
     <string name="pdf_preset_medium_title">3 × 7 Середні етикетки для коробок</string>
@@ -283,4 +296,21 @@
     <string name="scanner_manual_title">Ручний пошук за коротким кодом / QR</string>
     <string name="scanner_manual_placeholder">напр. BOX-001 або boxvault://box/... </string>
     <string name="scanner_manual_open_btn">Відкрити</string>
+
+    <!-- Photo Source Camera Permission Dialog -->
+    <string name="photo_camera_perm_dialog_title">Потрібен дозвіл на камеру</string>
+    <string name="photo_camera_perm_dialog_desc">BoxVault потрібен доступ до камери для фотографування коробок і предметів. Ви можете надати дозвіл або обрати фото з галереї.</string>
+    <string name="photo_camera_perm_retry">Надати дозвіл</string>
+    <string name="photo_camera_perm_gallery">Обрати з галереї</string>
+
+    <!-- Onboarding Dialog -->
+    <string name="onboarding_title">Ласкаво просимо до BoxVault</string>
+    <string name="onboarding_subtitle">Ваше 100% офлайн сховище та менеджер фізичного інвентарю.</string>
+    <string name="onboarding_feature_rooms_title">Групування за кімнатами та локаціями</string>
+    <string name="onboarding_feature_rooms_desc">Організовуйте коробки за кімнатами, такими як Гараж, Горище або Вітальня, за допомогою кольорових позначок.</string>
+    <string name="onboarding_feature_qr_title">Аркуші етикеток із QR-кодами</string>
+    <string name="onboarding_feature_qr_desc">Створюйте та друкуйте висококонтрастні аркуші QR-етикеток прямо на принтері або експортуйте у PDF.</string>
+    <string name="onboarding_feature_privacy_title">100% офлайн і приватність</string>
+    <string name="onboarding_feature_privacy_desc">Жодного хмарного відстеження, нуль мережевих дозволів. Ваш інвентар залишається виключно на вашому пристрої.</string>
+    <string name="onboarding_get_started">Розпочати</string>
 </resources>

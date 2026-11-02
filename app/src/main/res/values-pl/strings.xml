@@ -90,6 +90,17 @@
     <string name="dashboard_quick_scan_qr">Skanuj QR</string>
     <string name="dashboard_quick_print_sheet">Drukuj QR</string>
     <string name="dashboard_quick_backup_zip">Kopia ZIP</string>
+    <string name="dashboard_hub_scan_qr">Skanuj kod QR</string>
+    <string name="dashboard_hub_print_sheet">Drukuj arkusz QR</string>
+    <string name="dashboard_hub_backup_zip">Kopia .ZIP</string>
+    <string name="dashboard_speed_dial_open">Otwórz szybkie akcje</string>
+    <string name="dashboard_speed_dial_close">Zamknij szybkie akcje</string>
+    <string name="dashboard_speed_dial_new_box">Nowe pudło</string>
+    <string name="dashboard_speed_dial_new_room">Nowe pomieszczenie</string>
+    <string name="dashboard_move_to_room_title">Przenieś pudło do pomieszczenia</string>
+    <string name="dashboard_move_to_room_subtitle">Wybierz miejsce docelowe dla \"%s\"</string>
+    <string name="dashboard_move_to_room_unassigned">Nieprzypisane / Brak pomieszczenia</string>
+    <string name="dashboard_move_to_room_new_room">+ Utwórz nowe pomieszczenie</string>
     <string name="dashboard_room_counts">%1$d pudełek • %2$d przedmiotów</string>
     <string name="dashboard_room_collapse">Zwiń pomieszczenie</string>
     <string name="dashboard_room_expand">Rozwiń pomieszczenie</string>
@@ -239,6 +250,8 @@
     <string name="pdf_switch_to_blank">Przełącz na puste etykiety</string>
     <string name="pdf_no_location">Nie określono lokalizacji</string>
     <string name="pdf_export_btn">Eksportuj arkusz PDF (etykiet: %d)</string>
+    <string name="pdf_direct_print_btn">Drukuj bezpośrednio</string>
+    <string name="pdf_print_job_title">Etykiety QR BoxVault</string>
     <string name="pdf_preset_large_title">2 × 4 Duże etykiety na kartony</string>
     <string name="pdf_preset_large_desc">8 etykiet/stronę — wytrzymałe pojemniki magazynowe i kartony przeprowadzkowe</string>
     <string name="pdf_preset_medium_title">3 × 7 Średnie etykiety na pudełka</string>
@@ -283,4 +296,21 @@
     <string name="scanner_manual_title">Ręczne wyszukiwanie kodu / QR</string>
     <string name="scanner_manual_placeholder">np. BOX-001 lub boxvault://box/...</string>
     <string name="scanner_manual_open_btn">Otwórz</string>
+
+    <!-- Photo Source Camera Permission Dialog -->
+    <string name="photo_camera_perm_dialog_title">Wymagane uprawnienie do aparatu</string>
+    <string name="photo_camera_perm_dialog_desc">BoxVault wymaga dostępu do aparatu, aby robić zdjęcia pudeł i przedmiotów. Możesz przyznać uprawnienie lub wybrać istniejące zdjęcie z galerii.</string>
+    <string name="photo_camera_perm_retry">Przyznaj uprawnienie</string>
+    <string name="photo_camera_perm_gallery">Wybierz z galerii</string>
+
+    <!-- Onboarding Dialog -->
+    <string name="onboarding_title">Witaj w BoxVault</string>
+    <string name="onboarding_subtitle">Twój w 100% offline magazyn osobisty i menedżer fizycznego inwentarza.</string>
+    <string name="onboarding_feature_rooms_title">Grupowanie według pomieszczeń i lokalizacji</string>
+    <string name="onboarding_feature_rooms_desc">Organizuj pudła w pomieszczenia takie jak Garaż, Strych czy Salon z kolorowymi akcentami.</string>
+    <string name="onboarding_feature_qr_title">Arkusze etykiet z kodami QR</string>
+    <string name="onboarding_feature_qr_desc">Generuj i drukuj kontrastowe arkusze etykiet QR bezpośrednio na drukarce lub eksportuj do pliku PDF.</string>
+    <string name="onboarding_feature_privacy_title">100% offline i pełna prywatność</string>
+    <string name="onboarding_feature_privacy_desc">Zero śledzenia w chmurze, brak uprawnień sieciowych. Twój inwentarz pozostaje wyłącznie na Twoim urządzeniu.</string>
+    <string name="onboarding_get_started">Rozpocznij</string>
 </resources>
