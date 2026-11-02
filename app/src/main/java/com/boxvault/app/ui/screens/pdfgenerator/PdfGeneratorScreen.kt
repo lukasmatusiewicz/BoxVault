@@ -1,5 +1,7 @@
 package com.boxvault.app.ui.screens.pdfgenerator
 
+import android.content.Context
+import android.print.PrintManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -32,6 +34,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.R
+import com.boxvault.app.util.pdf.BoxVaultPrintDocumentAdapter
 import com.boxvault.app.util.pdf.PdfPageSize
 import com.boxvault.app.util.pdf.QrGridPreset
 import java.text.SimpleDateFormat
@@ -129,13 +133,40 @@ fun PdfGeneratorScreen(
                     }
                 },
                 actions = {
+                    FilledTonalButton(
+                        onClick = {
+                            val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
+                            val adapter = BoxVaultPrintDocumentAdapter(
+                                labels = uiState.activeLabelSpecs,
+                                preset = uiState.gridPreset,
+                                pageSize = uiState.pageSize,
+                                drawCutGuides = uiState.drawCutGuides,
+                                jobName = context.getString(R.string.pdf_print_job_title)
+                            )
+                            printManager.print(
+                                context.getString(R.string.pdf_print_job_title),
+                                adapter,
+                                null
+                            )
+                        },
+                        enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting,
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Print,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(stringResource(R.string.pdf_direct_print_btn))
+                    }
                     Button(
                         onClick = {
                             val timestamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
                             createPdfDocumentLauncher.launch("boxvault_qr_labels_$timestamp.pdf")
                         },
                         enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting,
-                        modifier = Modifier.padding(end = 12.dp)
+                        modifier = Modifier.padding(end = 8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.PictureAsPdf,
@@ -523,23 +554,58 @@ fun PdfGeneratorScreen(
             }
 
             item {
-                Button(
-                    onClick = {
-                        val timestamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
-                        createPdfDocumentLauncher.launch("boxvault_qr_labels_$timestamp.pdf")
-                    },
-                    enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(12.dp)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.Print, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.pdf_export_btn, uiState.activeLabelSpecs.size),
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    Button(
+                        onClick = {
+                            val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
+                            val adapter = BoxVaultPrintDocumentAdapter(
+                                labels = uiState.activeLabelSpecs,
+                                preset = uiState.gridPreset,
+                                pageSize = uiState.pageSize,
+                                drawCutGuides = uiState.drawCutGuides,
+                                jobName = context.getString(R.string.pdf_print_job_title)
+                            )
+                            printManager.print(
+                                context.getString(R.string.pdf_print_job_title),
+                                adapter,
+                                null
+                            )
+                        },
+                        enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Print, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.pdf_direct_print_btn),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val timestamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
+                            createPdfDocumentLauncher.launch("boxvault_qr_labels_$timestamp.pdf")
+                        },
+                        enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.PictureAsPdf, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.pdf_export_btn, uiState.activeLabelSpecs.size),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                 }
             }
         }
