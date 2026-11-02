@@ -276,4 +276,35 @@ class DashboardViewModelTest {
         assertFalse(viewModel.uiState.value.isSearchActive)
         assertEquals("", viewModel.uiState.value.searchQuery)
     }
+
+    @Test
+    fun `moveBoxToRoom reassigns box between rooms and unassigned`() = runTest(testDispatcher) {
+        val roomA = repository.createRoom(name = "Living Room", colorHex = "#10B981")
+        val roomB = repository.createRoom(name = "Basement", colorHex = "#F59E0B")
+
+        val box = repository.createBox(
+            name = "Books and Board Games",
+            location = "Living Room",
+            roomId = roomA.id
+        )
+
+        val viewModel = DashboardViewModel(repository)
+        viewModel.uiState.first { !it.isLoading && it.totalRooms == 2 && it.totalBoxes == 1 }
+
+        // Move to Room B
+        viewModel.moveBoxToRoom(box.id, roomB.id)
+        val stateAfterMove = viewModel.uiState.first {
+            val sectionB = it.roomSections.firstOrNull { s -> s.room.id == roomB.id }
+            sectionB?.boxes?.any { b -> b.box.id == box.id } == true
+        }
+        assertEquals(roomB.id, stateAfterMove.allBoxes.first { it.box.id == box.id }.box.roomId)
+
+        // Move to Unassigned (null)
+        viewModel.moveBoxToRoom(box.id, null)
+        val stateAfterUnassign = viewModel.uiState.first {
+            it.unassignedBoxes.any { b -> b.box.id == box.id }
+        }
+        assertNull(stateAfterUnassign.allBoxes.first { it.box.id == box.id }.box.roomId)
+        assertEquals(1, stateAfterUnassign.unassignedBoxes.size)
+    }
 }

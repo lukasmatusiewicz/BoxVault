@@ -85,6 +85,15 @@ class SensoryFeedbackManagerTest {
     }
 
     @Test
+    fun onActionSuccess_performsLongPressHaptic_whenEnabled() {
+        preferencesManager.setHapticsEnabled(true)
+        sensoryManager.onActionSuccess(testHapticFeedback)
+
+        assertEquals(1, performedHaptics.size)
+        assertEquals(HapticFeedbackType.LongPress, performedHaptics[0])
+    }
+
+    @Test
     fun playClickSound_doesNotCrash_whenEnabledOrDisabled() {
         preferencesManager.setSoundEffectsEnabled(true)
         sensoryManager.playClickSound()
