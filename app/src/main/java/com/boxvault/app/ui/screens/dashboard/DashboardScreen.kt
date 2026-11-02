@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -77,6 +78,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -138,6 +140,8 @@ fun DashboardScreen(
     var isSpeedDialExpanded by remember { mutableStateOf(false) }
     var boxToMove by remember { mutableStateOf<BoxSummary?>(null) }
     var pendingMoveBoxId by remember { mutableStateOf<String?>(null) }
+    val collapsedRoomIds = remember { mutableStateMapOf<String, Boolean>() }
+    var isUnassignedCollapsed by remember { mutableStateOf(false) }
 
     val fabRotation by animateFloatAsState(
         targetValue = if (isSpeedDialExpanded) 45f else 0f,
@@ -213,61 +217,64 @@ fun DashboardScreen(
             }
         }
     ) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = innerPadding.calculateBottomPadding())
+                .padding(bottom = innerPadding.calculateBottomPadding()),
+            contentPadding = PaddingValues(top = 6.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Summary Stats & Utility Hub (Collapses smoothly when searching)
-            AnimatedVisibility(
-                visible = !uiState.isSearchActive,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                SummaryStatsBanner(
-                    totalBoxes = uiState.totalBoxes,
-                    totalItemQuantity = uiState.totalItemQuantity,
-                    distinctItemCount = uiState.distinctItemCount,
-                    totalRooms = uiState.totalRooms,
-                    onScanQrClick = onNavigateToQrScanner,
-                    onPrintQrSheetClick = onNavigateToPdfGenerator,
-                    onBackupRestoreClick = onNavigateToBackupRestore
+            // 1. Summary Stats & Quick Actions Banner (Visible when not searching)
+            if (!uiState.isSearchActive) {
+                item(key = "summary_stats_banner") {
+                    SummaryStatsBanner(
+                        totalBoxes = uiState.totalBoxes,
+                        totalItemQuantity = uiState.totalItemQuantity,
+                        distinctItemCount = uiState.distinctItemCount,
+                        totalRooms = uiState.totalRooms,
+                        onScanQrClick = onNavigateToQrScanner,
+                        onPrintQrSheetClick = onNavigateToPdfGenerator,
+                        onBackupRestoreClick = onNavigateToBackupRestore
+                    )
+                }
+            }
+
+            // 2. Instant Global Search Bar (Under Summary Stats; scrolls off when scrolling down)
+            item(key = "dashboard_search_bar") {
+                OutlinedTextField(
+                    value = uiState.searchQuery,
+                    onValueChange = viewModel::onSearchQueryChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 4.dp, bottom = 4.dp),
+                    placeholder = {
+                        Text(stringResource(R.string.dashboard_search_placeholder))
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = stringResource(R.string.dashboard_search_content_desc)
+                        )
+                    },
+                    trailingIcon = {
+                        if (uiState.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = viewModel::onClearSearch) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = stringResource(R.string.dashboard_search_clear)
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp)
                 )
             }
 
-            // Instant Global Search Bar
-            OutlinedTextField(
-                value = uiState.searchQuery,
-                onValueChange = viewModel::onSearchQueryChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 4.dp, bottom = 10.dp),
-                placeholder = {
-                    Text(stringResource(R.string.dashboard_search_placeholder))
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = stringResource(R.string.dashboard_search_content_desc)
-                    )
-                },
-                trailingIcon = {
-                    if (uiState.searchQuery.isNotEmpty()) {
-                        IconButton(onClick = viewModel::onClearSearch) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = stringResource(R.string.dashboard_search_clear)
-                            )
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp)
-            )
-
+            // 3. Search Results Content (when isSearchActive) OR Normal Dashboard Content (when !isSearchActive)
             if (uiState.isSearchActive) {
-                GlobalSearchResultsContent(
+                globalSearchResultsItems(
                     query = uiState.searchResult.query,
                     matchingBoxes = uiState.searchResult.matchingBoxes,
                     matchingItems = uiState.searchResult.matchingItems,
@@ -275,8 +282,11 @@ fun DashboardScreen(
                     onBulkEntryClick = onNavigateToBulkEntry
                 )
             } else {
-                DashboardHomeContent(
+                dashboardHomeItems(
                     uiState = uiState,
+                    collapsedRoomIds = collapsedRoomIds,
+                    isUnassignedCollapsed = isUnassignedCollapsed,
+                    onToggleUnassignedCollapse = { isUnassignedCollapsed = !isUnassignedCollapsed },
                     onBoxClick = onNavigateToBoxDetail,
                     onBoxLongClick = { summary ->
                         sensoryManager.onActionSuccess(haptic)
@@ -518,9 +528,11 @@ fun DashboardScreen(
     }
 }
 
-@Composable
-private fun DashboardHomeContent(
+private fun LazyListScope.dashboardHomeItems(
     uiState: DashboardUiState,
+    collapsedRoomIds: SnapshotStateMap<String, Boolean>,
+    isUnassignedCollapsed: Boolean,
+    onToggleUnassignedCollapse: () -> Unit,
     onBoxClick: (String) -> Unit,
     onBoxLongClick: (BoxSummary) -> Unit,
     onBulkEntryClick: (String) -> Unit,
@@ -529,121 +541,76 @@ private fun DashboardHomeContent(
     onEditRoom: (RoomEntity) -> Unit,
     onDeleteRoom: (RoomEntity) -> Unit
 ) {
-    val collapsedRoomIds = remember { mutableStateMapOf<String, Boolean>() }
-    var isUnassignedCollapsed by remember { mutableStateOf(false) }
+    val hasAnyBoxes = uiState.allBoxes.isNotEmpty()
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 6.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        val hasAnyBoxes = uiState.allBoxes.isNotEmpty()
+    if (!hasAnyBoxes) {
+        item(key = "empty_dashboard_state") {
+            EmptyDashboardState(
+                hasAnyRooms = uiState.hasRooms,
+                onCreateBoxClick = onCreateBoxClick,
+                onCreateRoomClick = onCreateRoomClick
+            )
+        }
+    } else if (!uiState.hasRooms) {
+        // --- AUTOMATIC FLAT-LIST FALLBACK (0 rooms created) ---
+        items(
+            items = uiState.allBoxes,
+            key = { it.box.id }
+        ) { summary ->
+            BoxSummaryCard(
+                summary = summary,
+                onClick = { onBoxClick(summary.box.id) },
+                onLongClick = { onBoxLongClick(summary) },
+                onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+    } else {
+        // --- ROOM-GROUPED HIERARCHY (1+ rooms exist) ---
+        uiState.roomSections.forEach { section ->
+            val isExpanded = !(collapsedRoomIds[section.room.id] ?: false)
+            item(key = "room_section_${section.room.id}") {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    RoomHeaderCard(
+                        room = section.room,
+                        boxCount = section.boxCount,
+                        totalItems = section.totalItems,
+                        isExpanded = isExpanded,
+                        onToggleExpand = {
+                            collapsedRoomIds[section.room.id] = isExpanded
+                        },
+                        onEditRoom = { onEditRoom(section.room) },
+                        onDeleteRoom = { onDeleteRoom(section.room) }
+                    )
 
-        if (!hasAnyBoxes) {
-            item {
-                EmptyDashboardState(
-                    hasAnyRooms = uiState.hasRooms,
-                    onCreateBoxClick = onCreateBoxClick,
-                    onCreateRoomClick = onCreateRoomClick
-                )
-            }
-        } else if (!uiState.hasRooms) {
-            // --- AUTOMATIC FLAT-LIST FALLBACK (0 rooms created) ---
-            items(
-                items = uiState.allBoxes,
-                key = { it.box.id }
-            ) { summary ->
-                BoxSummaryCard(
-                    summary = summary,
-                    onClick = { onBoxClick(summary.box.id) },
-                    onLongClick = { onBoxLongClick(summary) },
-                    onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-        } else {
-            // --- ROOM-GROUPED HIERARCHY (1+ rooms exist) ---
-            uiState.roomSections.forEach { section ->
-                val isExpanded = !(collapsedRoomIds[section.room.id] ?: false)
-                item(key = "room_section_${section.room.id}") {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        RoomHeaderCard(
-                            room = section.room,
-                            boxCount = section.boxCount,
-                            totalItems = section.totalItems,
-                            isExpanded = isExpanded,
-                            onToggleExpand = {
-                                collapsedRoomIds[section.room.id] = isExpanded
-                            },
-                            onEditRoom = { onEditRoom(section.room) },
-                            onDeleteRoom = { onDeleteRoom(section.room) }
-                        )
-
-                        AnimatedVisibility(
-                            visible = isExpanded,
-                            enter = fadeIn(tween(200)) + expandVertically(),
-                            exit = fadeOut(tween(150)) + shrinkVertically()
+                    AnimatedVisibility(
+                        visible = isExpanded,
+                        enter = fadeIn(tween(200)) + expandVertically(),
+                        exit = fadeOut(tween(150)) + shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 6.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                if (section.boxes.isEmpty()) {
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 24.dp)
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.dashboard_room_empty),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(12.dp)
-                                        )
-                                    }
-                                } else {
-                                    section.boxes.forEach { summary ->
-                                        BoxSummaryCard(
-                                            summary = summary,
-                                            onClick = { onBoxClick(summary.box.id) },
-                                            onLongClick = { onBoxLongClick(summary) },
-                                            onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
-                                            modifier = Modifier.padding(start = 24.dp, end = 16.dp)
-                                        )
-                                    }
+                            if (section.boxes.isEmpty()) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.dashboard_room_empty),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(12.dp)
+                                    )
                                 }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (uiState.unassignedBoxes.isNotEmpty()) {
-                item(key = "unassigned_section") {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        UnassignedHeaderCard(
-                            boxCount = uiState.unassignedBoxes.size,
-                            totalItems = uiState.unassignedBoxes.sumOf { it.itemCount },
-                            isExpanded = !isUnassignedCollapsed,
-                            onToggleExpand = { isUnassignedCollapsed = !isUnassignedCollapsed }
-                        )
-
-                        AnimatedVisibility(
-                            visible = !isUnassignedCollapsed,
-                            enter = fadeIn(tween(200)) + expandVertically(),
-                            exit = fadeOut(tween(150)) + shrinkVertically()
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 6.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                uiState.unassignedBoxes.forEach { summary ->
+                            } else {
+                                section.boxes.forEach { summary ->
                                     BoxSummaryCard(
                                         summary = summary,
                                         onClick = { onBoxClick(summary.box.id) },
@@ -652,6 +619,42 @@ private fun DashboardHomeContent(
                                         modifier = Modifier.padding(start = 24.dp, end = 16.dp)
                                     )
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (uiState.unassignedBoxes.isNotEmpty()) {
+            item(key = "unassigned_section") {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    UnassignedHeaderCard(
+                        boxCount = uiState.unassignedBoxes.size,
+                        totalItems = uiState.unassignedBoxes.sumOf { it.itemCount },
+                        isExpanded = !isUnassignedCollapsed,
+                        onToggleExpand = onToggleUnassignedCollapse
+                    )
+
+                    AnimatedVisibility(
+                        visible = !isUnassignedCollapsed,
+                        enter = fadeIn(tween(200)) + expandVertically(),
+                        exit = fadeOut(tween(150)) + shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            uiState.unassignedBoxes.forEach { summary ->
+                                BoxSummaryCard(
+                                    summary = summary,
+                                    onClick = { onBoxClick(summary.box.id) },
+                                    onLongClick = { onBoxLongClick(summary) },
+                                    onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
+                                    modifier = Modifier.padding(start = 24.dp, end = 16.dp)
+                                )
                             }
                         }
                     }
@@ -1105,99 +1108,99 @@ private fun BoxSummaryCard(
     }
 }
 
-@Composable
-private fun GlobalSearchResultsContent(
+private fun LazyListScope.globalSearchResultsItems(
     query: String,
     matchingBoxes: List<BoxWithItemsAndPhotos>,
     matchingItems: List<ItemWithBox>,
     onBoxClick: (String) -> Unit,
     onBulkEntryClick: (String) -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            Text(
-                text = stringResource(R.string.dashboard_search_results_title, query),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
+    item(key = "search_results_title") {
+        Text(
+            text = stringResource(R.string.dashboard_search_results_title, query),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+    }
 
-        if (matchingBoxes.isEmpty() && matchingItems.isEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
+    if (matchingBoxes.isEmpty() && matchingItems.isEmpty()) {
+        item(key = "search_no_results") {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = stringResource(R.string.dashboard_search_no_results),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = stringResource(R.string.dashboard_search_no_results_hint),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.dashboard_search_no_results),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.dashboard_search_no_results_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
+    }
 
-        if (matchingItems.isNotEmpty()) {
-            item {
-                Text(
-                    text = stringResource(R.string.dashboard_search_matching_items, matchingItems.size),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
-            items(
-                items = matchingItems,
-                key = { "item_${it.item.id}" }
-            ) { itemWithBox ->
-                SearchMatchingItemCard(
-                    itemWithBox = itemWithBox,
-                    onClick = { onBoxClick(itemWithBox.box.id) }
-                )
-            }
+    if (matchingItems.isNotEmpty()) {
+        item(key = "search_matching_items_header") {
+            Text(
+                text = stringResource(R.string.dashboard_search_matching_items, matchingItems.size),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
         }
+        items(
+            items = matchingItems,
+            key = { "item_${it.item.id}" }
+        ) { itemWithBox ->
+            SearchMatchingItemCard(
+                itemWithBox = itemWithBox,
+                onClick = { onBoxClick(itemWithBox.box.id) },
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+    }
 
-        if (matchingBoxes.isNotEmpty()) {
-            item {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.dashboard_search_matching_boxes, matchingBoxes.size),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            items(
-                items = matchingBoxes,
-                key = { "box_${it.box.id}" }
-            ) { boxWithDetails ->
-                BoxSummaryCard(
-                    summary = BoxSummary(
-                        box = boxWithDetails.box,
-                        itemCount = boxWithDetails.distinctItemCount,
-                        totalQuantity = boxWithDetails.totalItemQuantity,
-                        photoCount = boxWithDetails.photos.size
-                    ),
-                    onClick = { onBoxClick(boxWithDetails.box.id) },
-                    onQuickBulkEntryClick = { onBulkEntryClick(boxWithDetails.box.id) }
-                )
-            }
+    if (matchingBoxes.isNotEmpty()) {
+        item(key = "search_matching_boxes_header") {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.dashboard_search_matching_boxes, matchingBoxes.size),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+        items(
+            items = matchingBoxes,
+            key = { "box_${it.box.id}" }
+        ) { boxWithDetails ->
+            BoxSummaryCard(
+                summary = BoxSummary(
+                    box = boxWithDetails.box,
+                    itemCount = boxWithDetails.distinctItemCount,
+                    totalQuantity = boxWithDetails.totalItemQuantity,
+                    photoCount = boxWithDetails.photos.size
+                ),
+                onClick = { onBoxClick(boxWithDetails.box.id) },
+                onQuickBulkEntryClick = { onBulkEntryClick(boxWithDetails.box.id) },
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
         }
     }
 }
@@ -1205,12 +1208,13 @@ private fun GlobalSearchResultsContent(
 @Composable
 private fun SearchMatchingItemCard(
     itemWithBox: ItemWithBox,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val boxColor = parseBoxColor(itemWithBox.box.colorHex)
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
