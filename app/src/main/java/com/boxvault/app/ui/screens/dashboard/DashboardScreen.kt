@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -26,13 +27,19 @@ import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,10 +52,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,9 +67,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.boxvault.app.data.local.entity.RoomEntity
 import com.boxvault.app.data.local.model.BoxSummary
 import com.boxvault.app.data.local.model.BoxWithItemsAndPhotos
 import com.boxvault.app.data.local.model.ItemWithBox
+import com.boxvault.app.ui.screens.boxedit.QuickCreateRoomDialog
 import com.boxvault.app.ui.theme.parseBoxColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,6 +86,9 @@ fun DashboardScreen(
     onNavigateToBackupRestore: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showCreateRoomDialog by remember { mutableStateOf(false) }
+    var editingRoom by remember { mutableStateOf<RoomEntity?>(null) }
+    var deletingRoom by remember { mutableStateOf<RoomEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -181,12 +197,73 @@ fun DashboardScreen(
                     onBoxClick = onNavigateToBoxDetail,
                     onBulkEntryClick = onNavigateToBulkEntry,
                     onCreateBoxClick = onNavigateToCreateBox,
+                    onCreateRoomClick = { showCreateRoomDialog = true },
+                    onEditRoom = { editingRoom = it },
+                    onDeleteRoom = { deletingRoom = it },
                     onScanQrClick = onNavigateToQrScanner,
                     onPrintQrSheetClick = onNavigateToPdfGenerator,
                     onBackupRestoreClick = onNavigateToBackupRestore
                 )
             }
         }
+    }
+
+    if (showCreateRoomDialog) {
+        QuickCreateRoomDialog(
+            title = "Create New Room",
+            confirmButtonText = "Create Room",
+            onDismiss = { showCreateRoomDialog = false },
+            onCreateRoom = { name, colorHex ->
+                viewModel.createRoom(name, colorHex)
+                showCreateRoomDialog = false
+            }
+        )
+    }
+
+    if (editingRoom != null) {
+        val target = editingRoom!!
+        QuickCreateRoomDialog(
+            initialName = target.name,
+            initialColorHex = target.colorHex,
+            title = "Edit Room",
+            confirmButtonText = "Save Changes",
+            onDismiss = { editingRoom = null },
+            onCreateRoom = { name, colorHex ->
+                viewModel.updateRoom(target.id, name, colorHex, target.iconName)
+                editingRoom = null
+            }
+        )
+    }
+
+    if (deletingRoom != null) {
+        val target = deletingRoom!!
+        AlertDialog(
+            onDismissRequest = { deletingRoom = null },
+            title = { Text("Delete Room?") },
+            text = {
+                Text(
+                    "Are you sure you want to delete \"${target.name}\"? All child boxes will be safely preserved as unassigned boxes."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteRoom(target.id)
+                        deletingRoom = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete Room")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingRoom = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -197,6 +274,9 @@ private fun DashboardHomeContent(
     onBoxClick: (String) -> Unit,
     onBulkEntryClick: (String) -> Unit,
     onCreateBoxClick: () -> Unit,
+    onCreateRoomClick: () -> Unit,
+    onEditRoom: (RoomEntity) -> Unit,
+    onDeleteRoom: (RoomEntity) -> Unit,
     onScanQrClick: () -> Unit,
     onPrintQrSheetClick: () -> Unit,
     onBackupRestoreClick: () -> Unit
@@ -212,9 +292,11 @@ private fun DashboardHomeContent(
                 totalBoxes = uiState.totalBoxes,
                 totalItemQuantity = uiState.totalItemQuantity,
                 distinctItemCount = uiState.distinctItemCount,
+                totalRooms = uiState.totalRooms,
                 onScanQrClick = onScanQrClick,
                 onPrintQrSheetClick = onPrintQrSheetClick,
-                onBackupRestoreClick = onBackupRestoreClick
+                onBackupRestoreClick = onBackupRestoreClick,
+                onCreateRoomClick = onCreateRoomClick
             )
         }
 
@@ -229,16 +311,21 @@ private fun DashboardHomeContent(
             }
         }
 
-        if (uiState.filteredBoxes.isEmpty()) {
+        val hasAnyVisibleBoxes = uiState.filteredBoxes.isNotEmpty()
+
+        if (!hasAnyVisibleBoxes && (!uiState.hasRooms || uiState.roomSections.all { it.boxes.isEmpty() })) {
             item {
                 EmptyDashboardState(
                     hasAnyBoxes = uiState.totalBoxes > 0,
+                    hasAnyRooms = uiState.hasRooms,
                     selectedLocation = uiState.selectedLocation,
                     onCreateBoxClick = onCreateBoxClick,
+                    onCreateRoomClick = onCreateRoomClick,
                     onClearLocationFilter = { onSelectLocation(null) }
                 )
             }
-        } else {
+        } else if (!uiState.hasRooms) {
+            // --- AUTOMATIC FLAT-LIST FALLBACK (0 rooms created) ---
             items(
                 items = uiState.filteredBoxes,
                 key = { it.box.id }
@@ -250,6 +337,71 @@ private fun DashboardHomeContent(
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
+        } else {
+            // --- ROOM-GROUPED HIERARCHY (1+ rooms exist) ---
+            uiState.roomSections.forEach { section ->
+                item(key = "room_header_${section.room.id}") {
+                    RoomHeaderCard(
+                        room = section.room,
+                        boxCount = section.boxCount,
+                        totalItems = section.totalItems,
+                        onEditRoom = { onEditRoom(section.room) },
+                        onDeleteRoom = { onDeleteRoom(section.room) }
+                    )
+                }
+
+                if (section.boxes.isEmpty()) {
+                    item(key = "room_empty_${section.room.id}") {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "No boxes assigned to this room yet.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+                } else {
+                    items(
+                        items = section.boxes,
+                        key = { "room_box_${section.room.id}_${it.box.id}" }
+                    ) { summary ->
+                        BoxSummaryCard(
+                            summary = summary,
+                            onClick = { onBoxClick(summary.box.id) },
+                            onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
+                            modifier = Modifier.padding(start = 24.dp, end = 16.dp)
+                        )
+                    }
+                }
+            }
+
+            if (uiState.unassignedBoxes.isNotEmpty()) {
+                item(key = "unassigned_header") {
+                    UnassignedHeaderCard(
+                        boxCount = uiState.unassignedBoxes.size,
+                        totalItems = uiState.unassignedBoxes.sumOf { it.itemCount }
+                    )
+                }
+
+                items(
+                    items = uiState.unassignedBoxes,
+                    key = { "unassigned_box_${it.box.id}" }
+                ) { summary ->
+                    BoxSummaryCard(
+                        summary = summary,
+                        onClick = { onBoxClick(summary.box.id) },
+                        onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
+                        modifier = Modifier.padding(start = 24.dp, end = 16.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -259,9 +411,11 @@ private fun SummaryStatsBanner(
     totalBoxes: Int,
     totalItemQuantity: Int,
     distinctItemCount: Int,
+    totalRooms: Int,
     onScanQrClick: () -> Unit,
     onPrintQrSheetClick: () -> Unit,
-    onBackupRestoreClick: () -> Unit
+    onBackupRestoreClick: () -> Unit,
+    onCreateRoomClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -282,9 +436,15 @@ private fun SummaryStatsBanner(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                if (totalRooms > 0) {
+                    StatColumn(
+                        value = totalRooms.toString(),
+                        label = "ROOMS"
+                    )
+                }
                 StatColumn(
                     value = totalBoxes.toString(),
-                    label = "STORAGE BOXES"
+                    label = "BOXES"
                 )
                 StatColumn(
                     value = totalItemQuantity.toString(),
@@ -299,6 +459,19 @@ private fun SummaryStatsBanner(
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                item {
+                    AssistChip(
+                        onClick = onCreateRoomClick,
+                        label = { Text("+ Room") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    )
+                }
                 item {
                     AssistChip(
                         onClick = onScanQrClick,
@@ -338,6 +511,121 @@ private fun SummaryStatsBanner(
                         }
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RoomHeaderCard(
+    room: RoomEntity,
+    boxCount: Int,
+    totalItems: Int,
+    onEditRoom: () -> Unit,
+    onDeleteRoom: () -> Unit
+) {
+    val accentColor = parseBoxColor(room.colorHex)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(accentColor)
+                )
+                Column {
+                    Text(
+                        text = room.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "$boxCount boxes • $totalItems items",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Row {
+                IconButton(onClick = onEditRoom) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit Room",
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                IconButton(onClick = onDeleteRoom) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Room",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UnassignedHeaderCard(
+    boxCount: Int,
+    totalItems: Int
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.MeetingRoom,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Column {
+                Text(
+                    text = "Unassigned / General",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "$boxCount boxes • $totalItems items (no room assigned)",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -760,8 +1048,10 @@ private fun SearchMatchingItemCard(
 @Composable
 private fun EmptyDashboardState(
     hasAnyBoxes: Boolean,
+    hasAnyRooms: Boolean,
     selectedLocation: String?,
     onCreateBoxClick: () -> Unit,
+    onCreateRoomClick: () -> Unit,
     onClearLocationFilter: () -> Unit
 ) {
     Card(
@@ -792,18 +1082,29 @@ private fun EmptyDashboardState(
                     style = MaterialTheme.typography.titleLarge
                 )
                 Text(
-                    text = "Create your first box, print its QR label, and use Fast Bulk Entry to catalog items in seconds.",
+                    text = "Create your first box, organize with rooms, print QR labels, and use Fast Bulk Entry to catalog items in seconds.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                AssistChip(
-                    onClick = onCreateBoxClick,
-                    label = { Text("Create First Box") },
-                    leadingIcon = {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AssistChip(
+                        onClick = onCreateBoxClick,
+                        label = { Text("Create First Box") },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                        }
+                    )
+                    if (!hasAnyRooms) {
+                        AssistChip(
+                            onClick = onCreateRoomClick,
+                            label = { Text("Create First Room") },
+                            leadingIcon = {
+                                Icon(imageVector = Icons.Default.MeetingRoom, contentDescription = null)
+                            }
+                        )
                     }
-                )
+                }
             } else {
                 Text(
                     text = "No boxes in \"$selectedLocation\"",

@@ -24,10 +24,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -41,10 +44,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.ui.theme.DefaultBoxColorOptions
+import com.boxvault.app.ui.theme.parseBoxColor
 import com.boxvault.app.util.qr.QrCodeGenerator
 
 private val PresetBoxCategories = listOf(
@@ -68,6 +75,17 @@ private val PresetBoxCategories = listOf(
     "Camping & Sports"
 )
 
+private val RoomColorPresets = listOf(
+    "#3B82F6", // Blue
+    "#10B981", // Emerald
+    "#F59E0B", // Amber
+    "#EF4444", // Red
+    "#8B5CF6", // Purple
+    "#EC4899", // Pink
+    "#6366F1", // Indigo
+    "#14B8A6"  // Teal
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoxEditScreen(
@@ -76,6 +94,8 @@ fun BoxEditScreen(
     onBoxSaved: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showCreateRoomDialog by remember { mutableStateOf(false) }
+
     val qrBitmap = remember(uiState.boxId) {
         runCatching {
             QrCodeGenerator.generateBoxQrBitmap(
@@ -258,12 +278,75 @@ fun BoxEditScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // Room Selector (with "+ New Room" quick inline action)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Assigned Room / Area",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    TextButton(
+                        onClick = { showCreateRoomDialog = true }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("+ New Room")
+                    }
+                }
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 2.dp)
+                ) {
+                    item {
+                        FilterChip(
+                            selected = uiState.roomId == null,
+                            onClick = { viewModel.onRoomSelected(null) },
+                            label = { Text("None (Unassigned)") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.MeetingRoom,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        )
+                    }
+
+                    items(uiState.availableRooms) { room ->
+                        val roomColor = parseBoxColor(room.colorHex)
+                        FilterChip(
+                            selected = uiState.roomId == room.id,
+                            onClick = { viewModel.onRoomSelected(room.id) },
+                            label = { Text(room.name) },
+                            leadingIcon = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .clip(CircleShape)
+                                        .background(roomColor)
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+
             // Storage Location + Quick Location Chips
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedTextField(
                     value = uiState.location,
                     onValueChange = viewModel::onLocationChange,
-                    label = { Text("Storage Location / Shelf") },
+                    label = { Text("Storage Location / Shelf (within Room)") },
                     placeholder = { Text("e.g., Garage Rack B, Shelf 2") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -375,4 +458,114 @@ fun BoxEditScreen(
             }
         }
     }
+
+    if (showCreateRoomDialog) {
+        QuickCreateRoomDialog(
+            onDismiss = { showCreateRoomDialog = false },
+            onCreateRoom = { name, colorHex ->
+                viewModel.createRoomInline(name, colorHex)
+                showCreateRoomDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun QuickCreateRoomDialog(
+    initialName: String = "",
+    initialColorHex: String = "#3B82F6",
+    title: String = "Create New Room",
+    confirmButtonText: String = "Create Room",
+    onDismiss: () -> Unit,
+    onCreateRoom: (name: String, colorHex: String) -> Unit
+) {
+    var roomName by remember { mutableStateOf(initialName) }
+    var selectedColorHex by remember { mutableStateOf(initialColorHex) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = roomName,
+                    onValueChange = {
+                        roomName = it
+                        errorMessage = null
+                    },
+                    label = { Text("Room / Area Name *") },
+                    placeholder = { Text("e.g., Garage, Attic, Living Room") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage ?: "",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Text(
+                    text = "Room Color Accent",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(RoomColorPresets) { hex ->
+                        val isSelected = selectedColorHex.equals(hex, ignoreCase = true)
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(parseBoxColor(hex))
+                                .border(
+                                    width = if (isSelected) 3.dp else 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onBackground else Color.Transparent,
+                                    shape = CircleShape
+                                )
+                                .clickable { selectedColorHex = hex },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val trimmed = roomName.trim()
+                    if (trimmed.isEmpty()) {
+                        errorMessage = "Room name is required."
+                    } else {
+                        onCreateRoom(trimmed, selectedColorHex)
+                    }
+                }
+            ) {
+                Text(confirmButtonText)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
