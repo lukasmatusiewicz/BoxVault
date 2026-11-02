@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
+import android.os.Build
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
@@ -11,13 +12,22 @@ import kotlin.math.roundToInt
 
 /**
  * Downsamples large camera/gallery photos (default max 1600px on the longest edge),
- * normalizes rotation/flip via [ExifInterface], and compresses to 80% JPEG quality
+ * normalizes rotation/flip via [ExifInterface], and compresses to 82% WebP quality
  * before saving to internal storage so local `.zip` backups stay compact and fast.
  */
 object PhotoCompressor {
 
     const val DEFAULT_MAX_EDGE_PX = 1600
     const val DEFAULT_JPEG_QUALITY = 80
+    const val DEFAULT_WEBP_QUALITY = 82
+
+    val webpCompressFormat: Bitmap.CompressFormat
+        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Bitmap.CompressFormat.WEBP_LOSSY
+        } else {
+            @Suppress("DEPRECATION")
+            Bitmap.CompressFormat.WEBP
+        }
 
     fun downsampleBitmap(
         source: Bitmap,
@@ -37,6 +47,25 @@ object PhotoCompressor {
         val targetHeight = (height * scale).roundToInt().coerceAtLeast(1)
 
         return Bitmap.createScaledBitmap(source, targetWidth, targetHeight, true)
+    }
+
+    fun compressBitmapToWebp(
+        source: Bitmap,
+        maxEdgePx: Int = DEFAULT_MAX_EDGE_PX,
+        quality: Int = DEFAULT_WEBP_QUALITY
+    ): ByteArray {
+        val scaled = downsampleBitmap(source, maxEdgePx)
+        val clampedQuality = quality.coerceIn(10, 100)
+        return try {
+            ByteArrayOutputStream().use { output ->
+                scaled.compress(webpCompressFormat, clampedQuality, output)
+                output.toByteArray()
+            }
+        } finally {
+            if (scaled != source) {
+                scaled.recycle()
+            }
+        }
     }
 
     fun compressBitmapToJpeg(
@@ -126,14 +155,14 @@ object PhotoCompressor {
 
     /**
      * Decodes [rawImageBytes], normalizes EXIF orientation, downsamples so the longest edge
-     * is at most [maxEdgePx], and re-encodes as JPEG at [quality].
+     * is at most [maxEdgePx], and re-encodes as WebP at [quality] (default 82).
      * If [rawImageBytes] is not an encoded image bitmap (e.g. synthetic byte fixtures in unit tests),
      * returns [rawImageBytes] unchanged.
      */
     fun compressAndNormalize(
         rawImageBytes: ByteArray,
         maxEdgePx: Int = DEFAULT_MAX_EDGE_PX,
-        quality: Int = DEFAULT_JPEG_QUALITY
+        quality: Int = DEFAULT_WEBP_QUALITY
     ): ByteArray {
         if (!hasEncodedImageSignature(rawImageBytes)) return rawImageBytes
 
@@ -168,7 +197,7 @@ object PhotoCompressor {
         try {
             val orientation = readExifOrientation(rawImageBytes)
             oriented = applyExifOrientation(decoded, orientation)
-            return compressBitmapToJpeg(
+            return compressBitmapToWebp(
                 source = oriented,
                 maxEdgePx = clampedMaxEdge,
                 quality = quality

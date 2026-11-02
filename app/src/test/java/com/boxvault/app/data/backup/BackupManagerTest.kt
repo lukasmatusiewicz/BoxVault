@@ -7,6 +7,7 @@ import com.boxvault.app.data.local.BoxVaultDatabase
 import com.boxvault.app.data.local.entity.BoxEntity
 import com.boxvault.app.data.local.entity.ItemEntity
 import com.boxvault.app.data.local.entity.RoomEntity
+import com.boxvault.app.data.local.entity.PhotoEntity
 import com.boxvault.app.data.repository.BoxVaultRepository
 import com.boxvault.app.data.storage.PhotoStorageManager
 import com.boxvault.app.ui.screens.backup.BackupRestoreViewModel
@@ -118,9 +119,25 @@ class BackupManagerTest {
             )
         )
         val boxPhotoBytes = byteArrayOf(11, 22, 33, 44, 55, 66)
-        val itemPhotoBytes = byteArrayOf(99, 88, 77, 66, 55, 44, 33)
+        val legacyJpgBytes = byteArrayOf(99, 88, 77, 66, 55, 44, 33)
+
+        // Modern WebP photo attached to box
         val boxPhoto = repository.attachPhotoToBox(box1.id, boxPhotoBytes)
-        val itemPhoto = repository.attachPhotoToItem(box1.id, item1.id, itemPhotoBytes)
+        assertTrue(boxPhoto.relativePath.endsWith(".webp"))
+
+        // Backward-compatible legacy JPEG photo attached to item
+        val legacyJpgPath = photoStorageManager.savePhotoBytes(
+            bytes = legacyJpgBytes,
+            prefix = "item_legacy",
+            extension = "jpg"
+        )
+        assertTrue(legacyJpgPath.endsWith(".jpg"))
+        val itemPhoto = PhotoEntity(
+            boxId = box1.id,
+            itemId = item1.id,
+            relativePath = legacyJpgPath
+        )
+        database.photoDao().insertPhoto(itemPhoto)
 
         // 2. Export backup to ZIP byte array
         val zipOutput = ByteArrayOutputStream()
@@ -175,7 +192,7 @@ class BackupManagerTest {
         assertTrue(photoStorageManager.photoExists(boxPhoto.relativePath))
         assertTrue(photoStorageManager.photoExists(itemPhoto.relativePath))
         assertArrayEquals(boxPhotoBytes, photoStorageManager.readPhotoBytes(boxPhoto.relativePath))
-        assertArrayEquals(itemPhotoBytes, photoStorageManager.readPhotoBytes(itemPhoto.relativePath))
+        assertArrayEquals(legacyJpgBytes, photoStorageManager.readPhotoBytes(itemPhoto.relativePath))
 
         // 6. Verify staging directory was cleaned up in finally block
         assertFalse(backupManager.stagingDirectory.exists())

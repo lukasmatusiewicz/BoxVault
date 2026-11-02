@@ -206,25 +206,52 @@ class BoxEditAndDetailViewModelTest {
     }
 
     @Test
-    fun `attachPhotoFromBitmap converts and attaches photo asynchronously`() = runTest(testDispatcher) {
+    fun `attachPhotoFromBitmap converts and attaches photo asynchronously to box and item`() = runTest(testDispatcher) {
         val box = repository.createBox(
             name = "Bitmap Box",
             shortCode = "BOX-020",
             location = "Office"
         )
+        val item = repository.createItem(
+            boxId = box.id,
+            name = "Bitmap Item"
+        )
         val detailVm = BoxDetailViewModel(repository, box.id, testDispatcher)
         detailVm.uiState.first { !it.isLoading && it.box != null }
 
-        val testBitmap = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
-        detailVm.attachPhotoFromBitmap(testBitmap)
+        // Box photo from bitmap
+        val testBitmapBox = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+        detailVm.attachPhotoFromBitmap(testBitmapBox, targetItemId = null)
 
-        val state = detailVm.uiState.first { it.boxLevelPhotos.size == 1 }
-        val photo = state.boxLevelPhotos.first()
-        assertTrue(photoStorageManager.photoExists(photo.relativePath))
+        val boxState = detailVm.uiState.first { it.boxLevelPhotos.size == 1 }
+        val boxPhoto = boxState.boxLevelPhotos.first()
+        assertTrue(photoStorageManager.photoExists(boxPhoto.relativePath))
+        assertTrue(boxPhoto.relativePath.endsWith(".webp"))
+
+        // Item photo from bitmap
+        val testBitmapItem = Bitmap.createBitmap(80, 80, Bitmap.Config.ARGB_8888)
+        detailVm.attachPhotoFromBitmap(testBitmapItem, targetItemId = item.id)
+
+        val itemState = detailVm.uiState.first { s ->
+            s.itemsWithPhotos.any { it.item.id == item.id && it.photos.isNotEmpty() }
+        }
+        val itemPhotos = itemState.itemsWithPhotos.first { it.item.id == item.id }.photos
+        assertEquals(1, itemPhotos.size)
+        assertTrue(photoStorageManager.photoExists(itemPhotos.first().relativePath))
+        assertTrue(itemPhotos.first().relativePath.endsWith(".webp"))
+
+        // Delete item photo
+        detailVm.deletePhoto(itemPhotos.first().id)
+        val afterDeleteState = detailVm.uiState.first { s ->
+            s.itemsWithPhotos.any { it.item.id == item.id && it.photos.isEmpty() }
+        }
+        val emptyItemPhotos = afterDeleteState.itemsWithPhotos.first { it.item.id == item.id }.photos
+        assertEquals(0, emptyItemPhotos.size)
+        assertFalse(photoStorageManager.photoExists(itemPhotos.first().relativePath))
     }
 
     @Test
-    fun `attachPhotoFromUri attaches photo to item asynchronously`() = runTest(testDispatcher) {
+    fun `attachPhotoFromUri attaches photo to box and to item asynchronously`() = runTest(testDispatcher) {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val box = repository.createBox(
             name = "URI Box",
@@ -243,14 +270,50 @@ class BoxEditAndDetailViewModelTest {
         }
         val fileUri = Uri.fromFile(tempImageFile)
 
-        detailVm.attachPhotoFromUri(context.contentResolver, fileUri, targetItemId = item.id)
+        // Attach to box via URI
+        detailVm.attachPhotoFromUri(context.contentResolver, fileUri, targetItemId = null)
+        val boxState = detailVm.uiState.first { it.boxLevelPhotos.size == 1 }
+        val boxPhoto = boxState.boxLevelPhotos.first()
+        assertTrue(photoStorageManager.photoExists(boxPhoto.relativePath))
 
-        val state = detailVm.uiState.first { s ->
+        // Attach to item via URI
+        detailVm.attachPhotoFromUri(context.contentResolver, fileUri, targetItemId = item.id)
+        val itemState = detailVm.uiState.first { s ->
             s.itemsWithPhotos.any { it.item.id == item.id && it.photos.isNotEmpty() }
         }
-        val itemPhotos = state.itemsWithPhotos.first { it.item.id == item.id }.photos
+        val itemPhotos = itemState.itemsWithPhotos.first { it.item.id == item.id }.photos
         assertEquals(1, itemPhotos.size)
         assertTrue(photoStorageManager.photoExists(itemPhotos.first().relativePath))
+
         tempImageFile.delete()
+    }
+
+    @Test
+    fun `saveItem with draftPhotoBytes creates item and attaches photo in one step`() = runTest(testDispatcher) {
+        val box = repository.createBox(
+            name = "Draft Box",
+            shortCode = "BOX-022",
+            location = "Garage"
+        )
+        val detailVm = BoxDetailViewModel(repository, box.id, testDispatcher)
+        detailVm.uiState.first { !it.isLoading && it.box != null }
+
+        val draftBytes = byteArrayOf(10, 20, 30, 40)
+        detailVm.saveItem(
+            name = "Hammer with Photo",
+            quantity = 2,
+            category = "Tools",
+            notes = "Steel claw",
+            draftPhotoBytes = draftBytes
+        )
+
+        val state = detailVm.uiState.first { s ->
+            s.itemsWithPhotos.any { it.item.name == "Hammer with Photo" && it.photos.isNotEmpty() }
+        }
+        val hammerEntry = state.itemsWithPhotos.first { it.item.name == "Hammer with Photo" }
+        assertEquals(1, hammerEntry.photos.size)
+        val photo = hammerEntry.photos.first()
+        assertTrue(photoStorageManager.photoExists(photo.relativePath))
+        assertTrue(photo.relativePath.endsWith(".webp"))
     }
 }
