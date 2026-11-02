@@ -91,11 +91,12 @@ fun BoxVaultHeader(
 
         if (isDashboard) {
             // Dashboard: Action buttons (Privacy and Theme) in top-right corner
+            // Offset down so orange [ QUICK SCAN ] graphic on the banner remains visible
             Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .padding(top = 4.dp, end = 12.dp),
+                    .padding(top = 28.dp, end = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -139,7 +140,7 @@ fun BoxVaultHeader(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .padding(top = 4.dp, end = 12.dp),
+                    .padding(top = 28.dp, end = 12.dp),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {

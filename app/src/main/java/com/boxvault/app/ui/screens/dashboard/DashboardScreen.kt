@@ -59,7 +59,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,8 +69,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -87,7 +84,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import com.boxvault.app.util.sensory.SensoryFeedbackManager
 import com.boxvault.app.data.preferences.ThemeMode
 import com.boxvault.app.data.preferences.UserPreferencesManager
-import com.boxvault.app.ui.components.BoxVaultHeader
 import com.boxvault.app.ui.components.OnboardingDialog
 import com.boxvault.app.ui.components.PrivacyPolicyDialog
 import com.boxvault.app.ui.components.ThemeSelectionDialog
@@ -259,7 +255,6 @@ fun DashboardScreen(
             } else {
                 DashboardHomeContent(
                     uiState = uiState,
-                    onSelectLocation = viewModel::onSelectLocation,
                     onBoxClick = onNavigateToBoxDetail,
                     onBoxLongClick = { summary ->
                         sensoryManager.onActionSuccess(haptic)
@@ -507,7 +502,6 @@ fun DashboardScreen(
 @Composable
 private fun DashboardHomeContent(
     uiState: DashboardUiState,
-    onSelectLocation: (String?) -> Unit,
     onBoxClick: (String) -> Unit,
     onBoxLongClick: (BoxSummary) -> Unit,
     onBulkEntryClick: (String) -> Unit,
@@ -540,34 +534,20 @@ private fun DashboardHomeContent(
             )
         }
 
-        // Location Filter Chips
-        if (uiState.locations.isNotEmpty()) {
-            item {
-                LocationFilterRow(
-                    locations = uiState.locations,
-                    selectedLocation = uiState.selectedLocation,
-                    onSelectLocation = onSelectLocation
-                )
-            }
-        }
+        val hasAnyBoxes = uiState.allBoxes.isNotEmpty()
 
-        val hasAnyVisibleBoxes = uiState.filteredBoxes.isNotEmpty()
-
-        if (!hasAnyVisibleBoxes && (!uiState.hasRooms || uiState.roomSections.all { it.boxes.isEmpty() })) {
+        if (!hasAnyBoxes) {
             item {
                 EmptyDashboardState(
-                    hasAnyBoxes = uiState.totalBoxes > 0,
                     hasAnyRooms = uiState.hasRooms,
-                    selectedLocation = uiState.selectedLocation,
                     onCreateBoxClick = onCreateBoxClick,
-                    onCreateRoomClick = onCreateRoomClick,
-                    onClearLocationFilter = { onSelectLocation(null) }
+                    onCreateRoomClick = onCreateRoomClick
                 )
             }
         } else if (!uiState.hasRooms) {
             // --- AUTOMATIC FLAT-LIST FALLBACK (0 rooms created) ---
             items(
-                items = uiState.filteredBoxes,
+                items = uiState.allBoxes,
                 key = { it.box.id }
             ) { summary ->
                 BoxSummaryCard(
@@ -959,40 +939,6 @@ private fun StatColumn(
     }
 }
 
-@Composable
-private fun LocationFilterRow(
-    locations: List<String>,
-    selectedLocation: String?,
-    onSelectLocation: (String?) -> Unit
-) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        item {
-            FilterChip(
-                selected = selectedLocation == null,
-                onClick = { onSelectLocation(null) },
-                label = { Text(stringResource(R.string.dashboard_filter_all_locations)) }
-            )
-        }
-        items(locations) { location ->
-            FilterChip(
-                selected = selectedLocation.equals(location, ignoreCase = true),
-                onClick = { onSelectLocation(location) },
-                label = { Text(location) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            )
-        }
-    }
-}
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BoxSummaryCard(
@@ -1361,12 +1307,9 @@ private fun SearchMatchingItemCard(
 
 @Composable
 private fun EmptyDashboardState(
-    hasAnyBoxes: Boolean,
     hasAnyRooms: Boolean,
-    selectedLocation: String?,
     onCreateBoxClick: () -> Unit,
-    onCreateRoomClick: () -> Unit,
-    onClearLocationFilter: () -> Unit
+    onCreateRoomClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -1390,44 +1333,33 @@ private fun EmptyDashboardState(
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
-            if (!hasAnyBoxes) {
-                Text(
-                    text = stringResource(R.string.dashboard_empty_title),
-                    style = MaterialTheme.typography.titleLarge
+            Text(
+                text = stringResource(R.string.dashboard_empty_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = stringResource(R.string.dashboard_empty_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AssistChip(
+                    onClick = onCreateBoxClick,
+                    label = { Text(stringResource(R.string.dashboard_empty_create_box)) },
+                    leadingIcon = {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                    }
                 )
-                Text(
-                    text = stringResource(R.string.dashboard_empty_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!hasAnyRooms) {
                     AssistChip(
-                        onClick = onCreateBoxClick,
-                        label = { Text(stringResource(R.string.dashboard_empty_create_box)) },
+                        onClick = onCreateRoomClick,
+                        label = { Text(stringResource(R.string.dashboard_empty_create_room)) },
                         leadingIcon = {
-                            Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                            Icon(imageVector = Icons.Default.MeetingRoom, contentDescription = null)
                         }
                     )
-                    if (!hasAnyRooms) {
-                        AssistChip(
-                            onClick = onCreateRoomClick,
-                            label = { Text(stringResource(R.string.dashboard_empty_create_room)) },
-                            leadingIcon = {
-                                Icon(imageVector = Icons.Default.MeetingRoom, contentDescription = null)
-                            }
-                        )
-                    }
                 }
-            } else {
-                Text(
-                    text = stringResource(R.string.dashboard_empty_no_boxes_in_location, selectedLocation ?: ""),
-                    style = MaterialTheme.typography.titleLarge
-                )
-                AssistChip(
-                    onClick = onClearLocationFilter,
-                    label = { Text(stringResource(R.string.dashboard_empty_show_all_locations)) }
-                )
             }
         }
     }

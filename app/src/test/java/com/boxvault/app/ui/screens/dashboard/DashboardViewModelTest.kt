@@ -71,7 +71,7 @@ class DashboardViewModelTest {
     }
 
     @Test
-    fun `dashboard aggregates box and item counts and filters by location`() = runTest(testDispatcher) {
+    fun `dashboard aggregates box and item counts accurately`() = runTest(testDispatcher) {
         val garageBox = repository.upsertBox(
             BoxEntity(
                 id = "box-garage",
@@ -103,17 +103,6 @@ class DashboardViewModelTest {
         assertEquals(2, state.distinctItemCount)
         assertEquals(listOf("Basement", "Garage"), state.locations)
         assertEquals(2, state.filteredBoxes.size)
-
-        // Filter by Garage location
-        viewModel.onSelectLocation("Garage")
-        assertEquals("Garage", viewModel.uiState.value.selectedLocation)
-        assertEquals(1, viewModel.uiState.value.filteredBoxes.size)
-        assertEquals("BOX-001", viewModel.uiState.value.filteredBoxes.first().box.shortCode)
-
-        // Toggling same location clears filter
-        viewModel.onSelectLocation("Garage")
-        assertNull(viewModel.uiState.value.selectedLocation)
-        assertEquals(2, viewModel.uiState.value.filteredBoxes.size)
     }
 
     @Test
