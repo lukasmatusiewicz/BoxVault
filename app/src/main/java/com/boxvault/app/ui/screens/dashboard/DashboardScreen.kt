@@ -218,13 +218,30 @@ fun DashboardScreen(
                 .fillMaxSize()
                 .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
+            // Summary Stats & Utility Hub (Collapses smoothly when searching)
+            AnimatedVisibility(
+                visible = !uiState.isSearchActive,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                SummaryStatsBanner(
+                    totalBoxes = uiState.totalBoxes,
+                    totalItemQuantity = uiState.totalItemQuantity,
+                    distinctItemCount = uiState.distinctItemCount,
+                    totalRooms = uiState.totalRooms,
+                    onScanQrClick = onNavigateToQrScanner,
+                    onPrintQrSheetClick = onNavigateToPdfGenerator,
+                    onBackupRestoreClick = onNavigateToBackupRestore
+                )
+            }
+
             // Instant Global Search Bar
             OutlinedTextField(
                 value = uiState.searchQuery,
                 onValueChange = viewModel::onSearchQueryChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
                 placeholder = {
                     Text(stringResource(R.string.dashboard_search_placeholder))
                 },
@@ -268,10 +285,7 @@ fun DashboardScreen(
                     onCreateBoxClick = onNavigateToCreateBox,
                     onCreateRoomClick = { showCreateRoomDialog = true },
                     onEditRoom = { editingRoom = it },
-                    onDeleteRoom = { deletingRoom = it },
-                    onScanQrClick = onNavigateToQrScanner,
-                    onPrintQrSheetClick = onNavigateToPdfGenerator,
-                    onBackupRestoreClick = onNavigateToBackupRestore
+                    onDeleteRoom = { deletingRoom = it }
                 )
             }
         }
@@ -512,10 +526,7 @@ private fun DashboardHomeContent(
     onCreateBoxClick: () -> Unit,
     onCreateRoomClick: () -> Unit,
     onEditRoom: (RoomEntity) -> Unit,
-    onDeleteRoom: (RoomEntity) -> Unit,
-    onScanQrClick: () -> Unit,
-    onPrintQrSheetClick: () -> Unit,
-    onBackupRestoreClick: () -> Unit
+    onDeleteRoom: (RoomEntity) -> Unit
 ) {
     val collapsedRoomIds = remember { mutableStateMapOf<String, Boolean>() }
     var isUnassignedCollapsed by remember { mutableStateOf(false) }
@@ -525,19 +536,6 @@ private fun DashboardHomeContent(
         contentPadding = PaddingValues(bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Summary Stats & Quick Actions Banner
-        item {
-            SummaryStatsBanner(
-                totalBoxes = uiState.totalBoxes,
-                totalItemQuantity = uiState.totalItemQuantity,
-                distinctItemCount = uiState.distinctItemCount,
-                totalRooms = uiState.totalRooms,
-                onScanQrClick = onScanQrClick,
-                onPrintQrSheetClick = onPrintQrSheetClick,
-                onBackupRestoreClick = onBackupRestoreClick
-            )
-        }
-
         val hasAnyBoxes = uiState.allBoxes.isNotEmpty()
 
         if (!hasAnyBoxes) {
@@ -671,7 +669,8 @@ private fun SummaryStatsBanner(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp)
+            .padding(top = 4.dp, bottom = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
