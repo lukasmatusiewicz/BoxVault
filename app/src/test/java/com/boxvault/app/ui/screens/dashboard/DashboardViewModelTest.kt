@@ -57,7 +57,9 @@ class DashboardViewModelTest {
             boxDao = database.boxDao(),
             itemDao = database.itemDao(),
             photoDao = database.photoDao(),
-            photoStorageManager = photoStorageManager
+            photoStorageManager = photoStorageManager,
+            boxVaultDatabase = database,
+            roomDao = database.roomDao()
         )
     }
 
@@ -112,6 +114,126 @@ class DashboardViewModelTest {
         viewModel.onSelectLocation("Garage")
         assertNull(viewModel.uiState.value.selectedLocation)
         assertEquals(2, viewModel.uiState.value.filteredBoxes.size)
+    }
+
+    @Test
+    fun `dashboard state with 0 rooms falls back automatically to clean flat box list`() = runTest(testDispatcher) {
+        // Seed boxes without any rooms created
+        repository.upsertBox(
+            BoxEntity(
+                id = "box-flat-1",
+                shortCode = "BOX-001",
+                name = "Seasonal Clothes",
+                location = "Closet"
+            )
+        )
+        repository.upsertBox(
+            BoxEntity(
+                id = "box-flat-2",
+                shortCode = "BOX-002",
+                name = "Winter Boots",
+                location = "Closet"
+            )
+        )
+
+        val viewModel = DashboardViewModel(repository)
+        val state = viewModel.uiState.first { !it.isLoading && it.totalBoxes == 2 }
+
+        // When 0 rooms exist, hasRooms must be false and flat list fallback is active
+        assertFalse(state.hasRooms)
+        assertEquals(0, state.totalRooms)
+        assertTrue(state.rooms.isEmpty())
+        assertTrue(state.roomSections.isEmpty())
+        assertEquals(2, state.filteredBoxes.size)
+        val shortCodes = state.filteredBoxes.map { it.box.shortCode }
+        assertTrue(shortCodes.contains("BOX-001"))
+        assertTrue(shortCodes.contains("BOX-002"))
+    }
+
+    @Test
+    fun `dashboard state with multiple rooms organizes boxes into room-grouped hierarchy with unassigned section`() = runTest(testDispatcher) {
+        val garageRoom = repository.createRoom(name = "Garage", colorHex = "#10B981")
+        val atticRoom = repository.createRoom(name = "Attic", colorHex = "#F59E0B")
+
+        val garageBox = repository.createBox(
+            name = "Power Tools",
+            shortCode = "BOX-G01",
+            location = "Bench",
+            roomId = garageRoom.id
+        )
+        val atticBox = repository.createBox(
+            name = "Holiday Decor",
+            shortCode = "BOX-A01",
+            location = "Rafters",
+            roomId = atticRoom.id
+        )
+        val unassignedBox = repository.createBox(
+            name = "General Hallway Box",
+            shortCode = "BOX-U01",
+            location = "Hallway",
+            roomId = null
+        )
+
+        repository.upsertItem(ItemEntity(boxId = garageBox.id, name = "Drill Bits", quantity = 10))
+        repository.upsertItem(ItemEntity(boxId = atticBox.id, name = "Ornaments", quantity = 25))
+
+        val viewModel = DashboardViewModel(repository)
+        val state = viewModel.uiState.first { !it.isLoading && it.totalRooms == 2 && it.totalBoxes == 3 }
+
+        assertTrue(state.hasRooms)
+        assertEquals(2, state.totalRooms)
+        assertEquals(2, state.roomSections.size)
+
+        val garageSection = state.roomSections.first { it.room.id == garageRoom.id }
+        assertEquals(1, garageSection.boxCount)
+        assertEquals(1, garageSection.totalItems)
+        assertEquals(10, garageSection.totalQuantity)
+        assertEquals(garageBox.id, garageSection.boxes.first().box.id)
+
+        val atticSection = state.roomSections.first { it.room.id == atticRoom.id }
+        assertEquals(1, atticSection.boxCount)
+        assertEquals(1, atticSection.totalItems)
+        assertEquals(25, atticSection.totalQuantity)
+        assertEquals(atticBox.id, atticSection.boxes.first().box.id)
+
+        // Verify unassigned section
+        assertEquals(1, state.unassignedBoxes.size)
+        assertEquals(unassignedBox.id, state.unassignedBoxes.first().box.id)
+    }
+
+    @Test
+    fun `room management operations create, update, and delete rooms with SET_NULL fallback`() = runTest(testDispatcher) {
+        val viewModel = DashboardViewModel(repository)
+        viewModel.uiState.first { !it.isLoading }
+
+        viewModel.createRoom(name = "Office Area", colorHex = "#3B82F6")
+        val stateAfterCreate = viewModel.uiState.first { it.totalRooms == 1 }
+        val createdRoom = stateAfterCreate.rooms.first()
+        assertEquals("Office Area", createdRoom.name)
+        assertEquals("#3B82F6", createdRoom.colorHex)
+
+        // Update room
+        viewModel.updateRoom(createdRoom.id, name = "Home Office & Studio", colorHex = "#8B5CF6")
+        val stateAfterUpdate = viewModel.uiState.first { it.rooms.firstOrNull()?.name == "Home Office & Studio" }
+        assertEquals("#8B5CF6", stateAfterUpdate.rooms.first().colorHex)
+
+        // Assign a box to this room
+        val box = repository.createBox(
+            name = "Office Documents",
+            location = "Desk",
+            roomId = createdRoom.id
+        )
+
+        val stateWithBox = viewModel.uiState.first { it.totalBoxes == 1 && it.roomSections.firstOrNull()?.boxes?.isNotEmpty() == true }
+        assertEquals(1, stateWithBox.roomSections.first().boxCount)
+        assertEquals(0, stateWithBox.unassignedBoxes.size)
+
+        // Delete room and verify child box becomes unassigned (SET_NULL safety)
+        viewModel.deleteRoom(createdRoom.id)
+        val stateAfterDelete = viewModel.uiState.first { it.totalRooms == 0 && it.totalBoxes == 1 }
+        assertFalse(stateAfterDelete.hasRooms)
+        assertEquals(1, stateAfterDelete.filteredBoxes.size)
+        assertNull(stateAfterDelete.filteredBoxes.first().box.roomId)
     }
 
     @Test

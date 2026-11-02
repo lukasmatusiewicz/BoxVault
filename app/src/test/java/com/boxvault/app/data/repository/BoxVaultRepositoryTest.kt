@@ -7,6 +7,7 @@ import com.boxvault.app.data.local.BoxVaultDatabase
 import com.boxvault.app.data.local.entity.BoxEntity
 import com.boxvault.app.data.local.entity.ItemEntity
 import com.boxvault.app.data.local.entity.PhotoEntity
+import com.boxvault.app.data.local.entity.RoomEntity
 import com.boxvault.app.data.storage.PhotoStorageManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -14,6 +15,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -45,7 +47,8 @@ class BoxVaultRepositoryTest {
             itemDao = database.itemDao(),
             photoDao = database.photoDao(),
             photoStorageManager = photoStorageManager,
-            boxVaultDatabase = database
+            boxVaultDatabase = database,
+            roomDao = database.roomDao()
         )
     }
 
@@ -154,20 +157,87 @@ class BoxVaultRepositoryTest {
     }
 
     @Test
-    fun `replaceAllInventoryData replaces data atomically inside transaction`() = runTest {
+    fun `room creation and retrieval via repository`() = runTest {
+        val room = repository.createRoom(
+            name = "Workshop",
+            colorHex = "#10B981"
+        )
+        assertNotNull(room.id)
+        assertEquals("Workshop", room.name)
+
+        val allRooms = repository.observeAllRooms().first()
+        assertEquals(1, allRooms.size)
+        assertEquals("Workshop", allRooms.first().name)
+
+        val fetched = repository.getRoomById(room.id)
+        assertEquals("Workshop", fetched?.name)
+    }
+
+    @Test
+    fun `box-to-room assignment and unassigned box querying via repository`() = runTest {
+        val room = repository.createRoom(
+            name = "Office / Den",
+            colorHex = "#3B82F6"
+        )
+
+        val assignedBox = repository.createBox(
+            name = "Financial Tax Documents",
+            shortCode = "BOX-O01",
+            location = "Desk Drawer",
+            roomId = room.id
+        )
+
+        val unassignedBox = repository.createBox(
+            name = "Unsorted Miscellaneous",
+            shortCode = "BOX-U01",
+            location = "Hallway Corner",
+            roomId = null
+        )
+
+        val roomBoxes = repository.observeBoxesByRoom(room.id).first()
+        assertEquals(1, roomBoxes.size)
+        assertEquals(assignedBox.id, roomBoxes.first().box.id)
+
+        val unassignedBoxes = repository.observeUnassignedBoxes().first()
+        assertEquals(1, unassignedBoxes.size)
+        assertEquals(unassignedBox.id, unassignedBoxes.first().box.id)
+
+        val unassignedSummaries = repository.observeUnassignedBoxSummaries().first()
+        assertEquals(1, unassignedSummaries.size)
+        assertEquals(unassignedBox.id, unassignedSummaries.first().box.id)
+
+        // Delete room and verify architectural safeguard: assigned box becomes unassigned
+        repository.deleteRoom(room.id)
+        assertNull(repository.getRoomById(room.id))
+
+        val unassignedAfterDelete = repository.observeUnassignedBoxes().first()
+        assertEquals(2, unassignedAfterDelete.size)
+        assertTrue(unassignedAfterDelete.any { it.box.id == assignedBox.id })
+        assertTrue(unassignedAfterDelete.any { it.box.id == unassignedBox.id })
+    }
+
+    @Test
+    fun `replaceAllInventoryData replaces data atomically inside transaction including rooms`() = runTest {
+        val oldRoom = repository.createRoom(name = "Old Attic", colorHex = "#999999")
         repository.upsertBox(
             BoxEntity(
                 id = "box-old-1",
+                roomId = oldRoom.id,
                 shortCode = "BOX-001",
                 name = "Old Box",
                 location = "Attic"
             )
         )
         assertEquals(1, repository.getAllBoxes().size)
+        assertEquals(1, repository.getAllRooms().size)
 
+        val newRooms = listOf(
+            RoomEntity(id = "room-new-1", name = "Garage"),
+            RoomEntity(id = "room-new-2", name = "Basement")
+        )
         val newBoxes = listOf(
-            BoxEntity(id = "box-new-1", shortCode = "BOX-101", name = "New Box 1", location = "Garage"),
-            BoxEntity(id = "box-new-2", shortCode = "BOX-102", name = "New Box 2", location = "Basement")
+            BoxEntity(id = "box-new-1", roomId = "room-new-1", shortCode = "BOX-101", name = "New Box 1", location = "Garage"),
+            BoxEntity(id = "box-new-2", roomId = "room-new-2", shortCode = "BOX-102", name = "New Box 2", location = "Basement")
         )
         val newItems = listOf(
             ItemEntity(id = "item-new-1", boxId = "box-new-1", name = "New Item 1")
@@ -176,11 +246,13 @@ class BoxVaultRepositoryTest {
             PhotoEntity(id = "photo-new-1", boxId = "box-new-1", relativePath = "box_new.jpg")
         )
 
-        repository.replaceAllInventoryData(newBoxes, newItems, newPhotos)
+        repository.replaceAllInventoryData(newRooms, newBoxes, newItems, newPhotos)
 
+        assertEquals(2, repository.getAllRooms().size)
         assertEquals(2, repository.getAllBoxes().size)
         assertEquals(1, repository.getAllItems().size)
         assertEquals(1, repository.getAllPhotos().size)
+        assertFalse(repository.getAllRooms().any { it.id == oldRoom.id })
         assertFalse(repository.getAllBoxes().any { it.id == "box-old-1" })
     }
 }
