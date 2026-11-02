@@ -60,4 +60,9 @@ class SensoryFeedbackManager(
         performHaptic(haptic, HapticFeedbackType.LongPress)
         playClickSound()
     }
+
+    fun onActionSuccess(haptic: HapticFeedback? = null) {
+        performHaptic(haptic, HapticFeedbackType.LongPress)
+        playClickSound()
+    }
 }

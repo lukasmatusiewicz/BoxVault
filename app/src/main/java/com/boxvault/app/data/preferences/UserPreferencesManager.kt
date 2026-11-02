@@ -2,6 +2,7 @@ package com.boxvault.app.data.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +37,11 @@ class UserPreferencesManager(context: Context) {
     )
     val hapticsEnabled: StateFlow<Boolean> = _hapticsEnabled.asStateFlow()
 
+    private val _hasCompletedOnboarding = MutableStateFlow(
+        prefs.getBoolean(KEY_COMPLETED_ONBOARDING, false)
+    )
+    val hasCompletedOnboarding: StateFlow<Boolean> = _hasCompletedOnboarding.asStateFlow()
+
     fun getThemeMode(): ThemeMode = _themeMode.value
 
     fun setThemeMode(mode: ThemeMode) {
@@ -57,6 +63,11 @@ class UserPreferencesManager(context: Context) {
         _hapticsEnabled.value = enabled
     }
 
+    suspend fun setCompletedOnboarding(completed: Boolean) {
+        prefs.edit().putBoolean(KEY_COMPLETED_ONBOARDING, completed).apply()
+        _hasCompletedOnboarding.value = completed
+    }
+
     private fun readStoredThemeMode(): ThemeMode {
         val storedName = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name)
         return try {
@@ -71,6 +82,7 @@ class UserPreferencesManager(context: Context) {
         private const val KEY_THEME_MODE = "pref_theme_mode"
         private const val KEY_SOUND_EFFECTS = "pref_sound_effects_enabled"
         private const val KEY_HAPTICS = "pref_haptics_enabled"
+        private const val KEY_COMPLETED_ONBOARDING = "pref_has_completed_onboarding"
 
         const val DEFAULT_SOUND_EFFECTS = true
         const val DEFAULT_HAPTICS = true

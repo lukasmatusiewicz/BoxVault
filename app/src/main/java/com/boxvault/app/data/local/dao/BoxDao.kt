@@ -26,6 +26,9 @@ interface BoxDao {
     @Query("UPDATE boxes SET updatedAt = :updatedAt WHERE id = :boxId")
     suspend fun updateBoxTimestamp(boxId: String, updatedAt: Long)
 
+    @Query("UPDATE boxes SET roomId = :roomId, updatedAt = :updatedAt WHERE id = :boxId")
+    suspend fun updateBoxRoom(boxId: String, roomId: String?, updatedAt: Long)
+
     @Delete
     suspend fun deleteBox(box: BoxEntity)
 

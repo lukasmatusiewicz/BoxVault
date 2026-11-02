@@ -167,9 +167,15 @@ class DashboardViewModel(
         _selectedLocation.value = nextLocation
     }
 
-    fun createRoom(name: String, colorHex: String = "#3B82F6", iconName: String = "room") {
+    fun createRoom(
+        name: String,
+        colorHex: String = "#3B82F6",
+        iconName: String = "room",
+        onCreated: ((String) -> Unit)? = null
+    ) {
         viewModelScope.launch {
-            repository.createRoom(name = name, colorHex = colorHex, iconName = iconName)
+            val created = repository.createRoom(name = name, colorHex = colorHex, iconName = iconName)
+            onCreated?.invoke(created.id)
         }
     }
 
@@ -189,6 +195,12 @@ class DashboardViewModel(
     fun deleteRoom(roomId: String) {
         viewModelScope.launch {
             repository.deleteRoom(roomId)
+        }
+    }
+
+    fun moveBoxToRoom(boxId: String, newRoomId: String?) {
+        viewModelScope.launch {
+            repository.assignBoxToRoom(boxId, newRoomId)
         }
     }
 

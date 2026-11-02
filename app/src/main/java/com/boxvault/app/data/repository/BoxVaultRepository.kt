@@ -228,6 +228,11 @@ class BoxVaultRepository(
         return updated
     }
 
+    suspend fun assignBoxToRoom(boxId: String, roomId: String?) {
+        val trimmedRoomId = roomId?.trim()?.takeIf { it.isNotEmpty() }
+        boxDao.updateBoxRoom(boxId = boxId, roomId = trimmedRoomId, updatedAt = System.currentTimeMillis())
+    }
+
     suspend fun deleteBox(boxId: String) {
         val boxPhotos = photoDao.getPhotosForBox(boxId)
         val items = itemDao.getItemsForBox(boxId)
