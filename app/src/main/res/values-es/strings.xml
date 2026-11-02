@@ -227,7 +227,7 @@
     <string name="bulk_entry_undo_btn">Deshacer</string>
 
     <!-- PDF Generator Screen -->
-    <string name="pdf_title">Hojas de etiquetas QR imprimibles</string>
+    <string name="pdf_title">Imprimir etiquetas QR</string>
     <string name="pdf_subtitle">%1$d etiquetas • %2$d página(s) (%3$s)</string>
     <string name="pdf_save_btn">Guardar PDF</string>
     <string name="pdf_section_mode">1. Modo de generación de etiquetas</string>
@@ -249,7 +249,7 @@
     <string name="pdf_no_boxes">Aún no hay cajas en la base de datos.</string>
     <string name="pdf_switch_to_blank">Cambiar a etiquetas en blanco</string>
     <string name="pdf_no_location">Sin ubicación asignada</string>
-    <string name="pdf_export_btn">Exportar PDF imprimible (%d etiquetas)</string>
+    <string name="pdf_export_btn">Exportar PDF (%d etiquetas)</string>
     <string name="pdf_direct_print_btn">Impresión directa</string>
     <string name="pdf_print_job_title">Etiquetas QR BoxVault</string>
     <string name="pdf_preset_large_title">2 × 4 Etiquetas grandes para cajas</string>

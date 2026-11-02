@@ -227,7 +227,7 @@
     <string name="bulk_entry_undo_btn">Rückgängig</string>
 
     <!-- PDF Generator Screen -->
-    <string name="pdf_title">Druckbare QR-Etikettenbögen</string>
+    <string name="pdf_title">QR-Etiketten drucken</string>
     <string name="pdf_subtitle">%1$d Etiketten • %2$d Seite(n) (%3$s)</string>
     <string name="pdf_save_btn">PDF speichern</string>
     <string name="pdf_section_mode">1. Etikettenerstellungsmodus</string>
@@ -249,7 +249,7 @@
     <string name="pdf_no_boxes">Noch keine Boxen in der Datenbank.</string>
     <string name="pdf_switch_to_blank">Zu Blanko-Etiketten wechseln</string>
     <string name="pdf_no_location">Kein Standort festgelegt</string>
-    <string name="pdf_export_btn">Druckbares PDF exportieren (%d Etiketten)</string>
+    <string name="pdf_export_btn">PDF exportieren (%d Etiketten)</string>
     <string name="pdf_direct_print_btn">Direkt drucken</string>
     <string name="pdf_print_job_title">BoxVault QR-Etiketten</string>
     <string name="pdf_preset_large_title">2 × 4 Große Karton-Etiketten</string>

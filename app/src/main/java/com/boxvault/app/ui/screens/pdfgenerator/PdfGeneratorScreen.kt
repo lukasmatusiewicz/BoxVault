@@ -111,7 +111,10 @@ fun PdfGeneratorScreen(
                     Column {
                         Text(
                             text = stringResource(R.string.pdf_title),
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = stringResource(
@@ -120,8 +123,10 @@ fun PdfGeneratorScreen(
                                 uiState.estimatedPageCount,
                                 uiState.pageSize.name
                             ),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 },
@@ -652,7 +657,7 @@ fun PdfGeneratorScreen(
                             text = stringResource(R.string.pdf_export_btn, uiState.activeLabelSpecs.size),
                             style = MaterialTheme.typography.titleMedium,
                             textAlign = TextAlign.Center,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
                     }

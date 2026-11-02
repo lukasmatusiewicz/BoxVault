@@ -227,7 +227,7 @@
     <string name="bulk_entry_undo_btn">Annulla</string>
 
     <!-- PDF Generator Screen -->
-    <string name="pdf_title">Fogli di etichette QR stampabili</string>
+    <string name="pdf_title">Stampa etichette QR</string>
     <string name="pdf_subtitle">%1$d etichette • %2$d pagina/e (%3$s)</string>
     <string name="pdf_save_btn">Salva PDF</string>
     <string name="pdf_section_mode">1. Modalità generazione etichette</string>
@@ -249,7 +249,7 @@
     <string name="pdf_no_boxes">Nessuna scatola presente nel database.</string>
     <string name="pdf_switch_to_blank">Passa alle etichette vuote</string>
     <string name="pdf_no_location">Nessuna posizione impostata</string>
-    <string name="pdf_export_btn">Esporta PDF stampabile (%d etichette)</string>
+    <string name="pdf_export_btn">Esporta PDF (%d etichette)</string>
     <string name="pdf_direct_print_btn">Stampa diretta</string>
     <string name="pdf_print_job_title">Etichette QR BoxVault</string>
     <string name="pdf_preset_large_title">2 × 4 Etichette grandi per scatoloni</string>

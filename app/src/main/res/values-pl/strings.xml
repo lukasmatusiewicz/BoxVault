@@ -227,7 +227,7 @@
     <string name="bulk_entry_undo_btn">Cofnij</string>
 
     <!-- PDF Generator Screen -->
-    <string name="pdf_title">Arkusze etykiet QR do druku</string>
+    <string name="pdf_title">Drukuj etykiety QR</string>
     <string name="pdf_subtitle">Etykiet: %1$d • Stron: %2$d (%3$s)</string>
     <string name="pdf_save_btn">Zapisz PDF</string>
     <string name="pdf_section_mode">1. Tryb generowania etykiet</string>
@@ -249,7 +249,7 @@
     <string name="pdf_no_boxes">Brak pudełek w bazie danych.</string>
     <string name="pdf_switch_to_blank">Przełącz na puste etykiety</string>
     <string name="pdf_no_location">Nie określono lokalizacji</string>
-    <string name="pdf_export_btn">Eksportuj arkusz PDF (etykiet: %d)</string>
+    <string name="pdf_export_btn">Eksportuj PDF (etykiet: %d)</string>
     <string name="pdf_direct_print_btn">Drukuj bezpośrednio</string>
     <string name="pdf_print_job_title">Etykiety QR BoxVault</string>
     <string name="pdf_preset_large_title">2 × 4 Duże etykiety na kartony</string>

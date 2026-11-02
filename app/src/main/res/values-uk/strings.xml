@@ -227,7 +227,7 @@
     <string name="bulk_entry_undo_btn">Скасувати</string>
 
     <!-- PDF Generator Screen -->
-    <string name="pdf_title">Аркуші QR-етикеток для друку</string>
+    <string name="pdf_title">Друк QR-етикеток</string>
     <string name="pdf_subtitle">%1$d етикеток • %2$d стор. (%3$s)</string>
     <string name="pdf_save_btn">Зберегти PDF</string>
     <string name="pdf_section_mode">1. Режим генерації етикеток</string>
@@ -249,7 +249,7 @@
     <string name="pdf_no_boxes">У базі даних ще немає коробок.</string>
     <string name="pdf_switch_to_blank">Перемкнутися на порожні етикетки</string>
     <string name="pdf_no_location">Локація не вказана</string>
-    <string name="pdf_export_btn">Експортувати аркуш PDF (%d етикеток)</string>
+    <string name="pdf_export_btn">Експорт PDF (%d етикеток)</string>
     <string name="pdf_direct_print_btn">Прямий друк</string>
     <string name="pdf_print_job_title">Етикетки QR BoxVault</string>
     <string name="pdf_preset_large_title">2 × 4 Великі етикетки для коробок</string>

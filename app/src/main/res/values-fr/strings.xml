@@ -227,7 +227,7 @@
     <string name="bulk_entry_undo_btn">Annuler</string>
 
     <!-- PDF Generator Screen -->
-    <string name="pdf_title">Planches d\'étiquettes QR imprimables</string>
+    <string name="pdf_title">Imprimer étiquettes QR</string>
     <string name="pdf_subtitle">%1$d étiquettes • %2$d page(s) (%3$s)</string>
     <string name="pdf_save_btn">Enregistrer le PDF</string>
     <string name="pdf_section_mode">1. Mode de génération des étiquettes</string>
@@ -249,7 +249,7 @@
     <string name="pdf_no_boxes">Aucune boîte dans la base de données pour l\'instant.</string>
     <string name="pdf_switch_to_blank">Passer aux étiquettes vierges</string>
     <string name="pdf_no_location">Aucun emplacement défini</string>
-    <string name="pdf_export_btn">Exporter le PDF imprimable (%d étiquettes)</string>
+    <string name="pdf_export_btn">Exporter le PDF (%d étiquettes)</string>
     <string name="pdf_direct_print_btn">Impression directe</string>
     <string name="pdf_print_job_title">Étiquettes QR BoxVault</string>
     <string name="pdf_preset_large_title">2 × 4 Grandes étiquettes pour cartons</string>
