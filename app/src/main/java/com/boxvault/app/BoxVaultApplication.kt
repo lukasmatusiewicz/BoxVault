@@ -22,7 +22,8 @@ class BoxVaultApplication : Application() {
             itemDao = database.itemDao(),
             photoDao = database.photoDao(),
             photoStorageManager = photoStorageManager,
-            boxVaultDatabase = database
+            boxVaultDatabase = database,
+            roomDao = database.roomDao()
         )
     }
 

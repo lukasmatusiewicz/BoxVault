@@ -4,6 +4,7 @@ import android.content.Context
 import com.boxvault.app.data.local.entity.BoxEntity
 import com.boxvault.app.data.local.entity.ItemEntity
 import com.boxvault.app.data.local.entity.PhotoEntity
+import com.boxvault.app.data.local.entity.RoomEntity
 import com.boxvault.app.data.repository.BoxVaultRepository
 import com.boxvault.app.data.storage.PhotoStorageManager
 import kotlinx.coroutines.CoroutineDispatcher
@@ -27,7 +28,8 @@ data class BackupExportSummary(
     val itemCount: Int,
     val photoCount: Int,
     val totalPhotoBytes: Long,
-    val exportedAt: Long
+    val exportedAt: Long,
+    val roomCount: Int = 0
 )
 
 data class BackupRestoreSummary(
@@ -35,7 +37,8 @@ data class BackupRestoreSummary(
     val itemCount: Int,
     val photoCount: Int,
     val verifiedPhotoBytes: Long,
-    val backupTimestamp: Long
+    val backupTimestamp: Long,
+    val roomCount: Int = 0
 )
 
 /**
@@ -76,22 +79,38 @@ class BackupManager(
         get() = File(cacheDir, STAGING_DIR_NAME)
 
     /**
-     * Exports all boxes, items, and physical photo files into a single `.zip` stream
+     * Exports all rooms, boxes, items, and physical photo files into a single `.zip` stream
      * containing `backup_manifest.json` and `photos/<relativePath>`.
      */
     suspend fun exportBackupToZip(
         outputStream: OutputStream
     ): BackupExportSummary = withContext(ioDispatcher) {
+        val rooms = repository.getAllRooms()
         val boxes = repository.getAllBoxes()
         val items = repository.getAllItems()
         val photos = repository.getAllPhotos()
         val exportedAt = System.currentTimeMillis()
+
+        val roomsJson = JSONArray()
+        rooms.forEach { room ->
+            roomsJson.put(
+                JSONObject().apply {
+                    put("id", room.id)
+                    put("name", room.name)
+                    put("colorHex", room.colorHex)
+                    put("iconName", room.iconName)
+                    put("createdAt", room.createdAt)
+                    put("updatedAt", room.updatedAt)
+                }
+            )
+        }
 
         val boxesJson = JSONArray()
         boxes.forEach { box ->
             boxesJson.put(
                 JSONObject().apply {
                     put("id", box.id)
+                    put("roomId", box.roomId ?: JSONObject.NULL)
                     put("shortCode", box.shortCode)
                     put("name", box.name)
                     put("location", box.location)
@@ -147,8 +166,9 @@ class BackupManager(
 
         val manifestJson = JSONObject().apply {
             put("schemaVersion", CURRENT_SCHEMA_VERSION)
-            put("appVersion", "1.0.0")
+            put("appVersion", "1.1.0")
             put("exportedAt", exportedAt)
+            put("rooms", roomsJson)
             put("boxes", boxesJson)
             put("items", itemsJson)
             put("photos", photosJson)
@@ -178,7 +198,8 @@ class BackupManager(
             itemCount = items.size,
             photoCount = photoPayloads.size,
             totalPhotoBytes = totalPhotoBytes,
-            exportedAt = exportedAt
+            exportedAt = exportedAt,
+            roomCount = rooms.size
         )
     }
 
@@ -249,11 +270,12 @@ class BackupManager(
             }
 
             val schemaVersion = rootJson.optInt("schemaVersion", -1)
-            if (schemaVersion != CURRENT_SCHEMA_VERSION) {
+            if (schemaVersion !in 1..CURRENT_SCHEMA_VERSION) {
                 throw IllegalArgumentException("Unsupported backup schemaVersion: $schemaVersion")
             }
 
             val backupTimestamp = rootJson.optLong("exportedAt", 0L)
+            val parsedRooms = parseRooms(rootJson.optJSONArray("rooms") ?: JSONArray())
             val parsedBoxes = parseBoxes(rootJson.optJSONArray("boxes") ?: JSONArray())
             val parsedItems = parseItems(rootJson.optJSONArray("items") ?: JSONArray())
             val stagedPhotos = parseAndVerifyStagedPhotos(
@@ -274,6 +296,7 @@ class BackupManager(
             }
 
             repository.replaceAllInventoryData(
+                rooms = parsedRooms,
                 boxes = parsedBoxes,
                 items = parsedItems,
                 photos = stagedPhotoPayloads.map { it.first }
@@ -284,7 +307,8 @@ class BackupManager(
                 itemCount = parsedItems.size,
                 photoCount = stagedPhotoPayloads.size,
                 verifiedPhotoBytes = verifiedBytes,
-                backupTimestamp = backupTimestamp
+                backupTimestamp = backupTimestamp,
+                roomCount = parsedRooms.size
             )
         } finally {
             stagingRoot.deleteRecursively()
@@ -320,6 +344,29 @@ class BackupManager(
         return targetCanonical
     }
 
+    private fun parseRooms(roomsArray: JSONArray): List<RoomEntity> {
+        val result = ArrayList<RoomEntity>(roomsArray.length())
+        for (i in 0 until roomsArray.length()) {
+            val obj = roomsArray.getJSONObject(i)
+            val id = obj.optString("id").trim()
+            val name = obj.optString("name").trim()
+            if (id.isEmpty() || name.isEmpty()) {
+                throw IllegalArgumentException("Invalid room record at index $i in manifest.")
+            }
+            result.add(
+                RoomEntity(
+                    id = id,
+                    name = name,
+                    colorHex = obj.optString("colorHex", "#3B82F6").ifEmpty { "#3B82F6" },
+                    iconName = obj.optString("iconName", "room").ifEmpty { "room" },
+                    createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
+                    updatedAt = obj.optLong("updatedAt", System.currentTimeMillis())
+                )
+            )
+        }
+        return result
+    }
+
     private fun parseBoxes(boxesArray: JSONArray): List<BoxEntity> {
         val result = ArrayList<BoxEntity>(boxesArray.length())
         for (i in 0 until boxesArray.length()) {
@@ -327,12 +374,14 @@ class BackupManager(
             val id = obj.optString("id").trim()
             val shortCode = obj.optString("shortCode").trim()
             val name = obj.optString("name").trim()
+            val roomId = if (obj.isNull("roomId")) null else obj.optString("roomId").trim().takeIf { it.isNotEmpty() }
             if (id.isEmpty() || shortCode.isEmpty() || name.isEmpty()) {
                 throw IllegalArgumentException("Invalid box record at index $i in manifest.")
             }
             result.add(
                 BoxEntity(
                     id = id,
+                    roomId = roomId,
                     shortCode = shortCode,
                     name = name,
                     location = obj.optString("location", ""),
@@ -466,7 +515,7 @@ class BackupManager(
     }
 
     companion object {
-        const val CURRENT_SCHEMA_VERSION = 1
+        const val CURRENT_SCHEMA_VERSION = 2
         const val MANIFEST_FILE_NAME = "backup_manifest.json"
         const val PHOTOS_ZIP_PREFIX = "photos/"
         const val STAGING_DIR_NAME = "restore_staging"
