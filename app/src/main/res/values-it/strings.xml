@@ -302,6 +302,8 @@
     <string name="photo_camera_perm_dialog_desc">BoxVault necessita dell\'accesso alla fotocamera per scattare foto di scatole e oggetti. Puoi concedere l\'accesso o selezionare una foto dalla galleria.</string>
     <string name="photo_camera_perm_retry">Concedi autorizzazione</string>
     <string name="photo_camera_perm_gallery">Scegli dalla galleria</string>
+    <string name="photo_camera_perm_open_settings">Apri impostazioni</string>
+    <string name="photo_camera_perm_settings_desc">L\'autorizzazione della fotocamera è stata disabilitata. Abilita la fotocamera nelle impostazioni Android per scattare foto.</string>
 
     <!-- Onboarding Dialog -->
     <string name="onboarding_title">Benvenuto in BoxVault</string>

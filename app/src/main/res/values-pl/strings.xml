@@ -302,6 +302,8 @@
     <string name="photo_camera_perm_dialog_desc">BoxVault wymaga dostępu do aparatu, aby robić zdjęcia pudeł i przedmiotów. Możesz przyznać uprawnienie lub wybrać istniejące zdjęcie z galerii.</string>
     <string name="photo_camera_perm_retry">Przyznaj uprawnienie</string>
     <string name="photo_camera_perm_gallery">Wybierz z galerii</string>
+    <string name="photo_camera_perm_open_settings">Otwórz ustawienia</string>
+    <string name="photo_camera_perm_settings_desc">Uprawnienie do aparatu zostało wyłączone. Włącz aparat w ustawieniach systemu Android, aby robić zdjęcia pudełek i przedmiotów.</string>
 
     <!-- Onboarding Dialog -->
     <string name="onboarding_title">Witaj w BoxVault</string>

@@ -302,6 +302,8 @@
     <string name="photo_camera_perm_dialog_desc">BoxVault needs camera access to take photos of your boxes and items. You can grant access or select an existing photo from your gallery.</string>
     <string name="photo_camera_perm_retry">Grant Permission</string>
     <string name="photo_camera_perm_gallery">Choose from Gallery</string>
+    <string name="photo_camera_perm_open_settings">Open Settings</string>
+    <string name="photo_camera_perm_settings_desc">Camera access has been disabled. Please enable Camera in Android Settings to capture photos of boxes and items.</string>
 
     <!-- Onboarding Dialog -->
     <string name="onboarding_title">Welcome to BoxVault</string>

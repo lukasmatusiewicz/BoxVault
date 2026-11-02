@@ -1,9 +1,12 @@
 package com.boxvault.app.ui.screens.boxdetail
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -63,6 +66,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,8 +86,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.boxvault.app.R
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.boxvault.app.ui.components.findActivity
 import com.boxvault.app.data.local.entity.BoxEntity
 import com.boxvault.app.data.local.entity.ItemEntity
 import com.boxvault.app.data.local.entity.PhotoEntity
@@ -173,16 +182,60 @@ fun BoxDetailScreen(
         pendingPhotoTargetItemId = null
     }
 
+    val activity = remember(context) { context.findActivity() }
     var isRequestingCameraPermission by remember { mutableStateOf(false) }
+    var hasRequestedCameraOnce by remember { mutableStateOf(false) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         isRequestingCameraPermission = false
+        hasRequestedCameraOnce = true
         if (isGranted) {
+            showCameraRationaleDialog = false
             takePicturePreviewLauncher.launch(null)
         } else {
             showCameraRationaleDialog = true
+        }
+    }
+
+    val isCameraPermanentlyDenied = remember(showCameraRationaleDialog, hasRequestedCameraOnce) {
+        val notGranted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) != PackageManager.PERMISSION_GRANTED
+        val cannotShowRationale = activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(
+            activity,
+            Manifest.permission.CAMERA
+        )
+        notGranted && (cannotShowRationale && hasRequestedCameraOnce)
+    }
+
+    val openAppSettings: () -> Unit = {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val isNowGranted = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.CAMERA
+                ) == PackageManager.PERMISSION_GRANTED
+                if (isNowGranted && showCameraRationaleDialog) {
+                    showCameraRationaleDialog = false
+                    takePicturePreviewLauncher.launch(null)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -548,32 +601,68 @@ fun BoxDetailScreen(
     if (showCameraRationaleDialog) {
         AlertDialog(
             onDismissRequest = { showCameraRationaleDialog = false },
-            title = { Text(stringResource(R.string.box_detail_camera_perm_title)) },
+            title = {
+                Text(
+                    text = if (isCameraPermanentlyDenied) {
+                        stringResource(R.string.photo_camera_perm_dialog_title)
+                    } else {
+                        stringResource(R.string.box_detail_camera_perm_title)
+                    }
+                )
+            },
             text = {
                 Text(
-                    stringResource(R.string.box_detail_camera_perm_desc)
+                    text = if (isCameraPermanentlyDenied) {
+                        stringResource(R.string.photo_camera_perm_settings_desc)
+                    } else {
+                        stringResource(R.string.box_detail_camera_perm_desc)
+                    }
                 )
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        showCameraRationaleDialog = false
-                        pendingPhotoTargetItemId = photoSourceTargetItemId
-                        pickImageLauncher.launch("image/*")
+                if (isCameraPermanentlyDenied) {
+                    Button(
+                        onClick = {
+                            showCameraRationaleDialog = false
+                            openAppSettings()
+                        }
+                    ) {
+                        Text(stringResource(R.string.photo_camera_perm_open_settings))
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Image,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.box_detail_camera_perm_gallery))
+                } else {
+                    Button(
+                        onClick = {
+                            showCameraRationaleDialog = false
+                            pendingPhotoTargetItemId = photoSourceTargetItemId
+                            pickImageLauncher.launch("image/*")
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.box_detail_camera_perm_gallery))
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCameraRationaleDialog = false }) {
-                    Text(stringResource(R.string.common_cancel))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (isCameraPermanentlyDenied) {
+                        TextButton(
+                            onClick = {
+                                showCameraRationaleDialog = false
+                                pendingPhotoTargetItemId = photoSourceTargetItemId
+                                pickImageLauncher.launch("image/*")
+                            }
+                        ) {
+                            Text(stringResource(R.string.photo_camera_perm_gallery))
+                        }
+                    }
+                    TextButton(onClick = { showCameraRationaleDialog = false }) {
+                        Text(stringResource(R.string.common_cancel))
+                    }
                 }
             }
         )
