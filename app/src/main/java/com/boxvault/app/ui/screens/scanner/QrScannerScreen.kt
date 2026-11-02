@@ -63,6 +63,9 @@ import androidx.compose.ui.geometry.Size as ComposeSize
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.boxvault.app.data.preferences.UserPreferencesManager
+import com.boxvault.app.util.sensory.SensoryFeedbackManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -84,10 +87,15 @@ fun QrScannerScreen(
     viewModel: QrScannerViewModel,
     onNavigateBack: () -> Unit,
     onExistingBoxScanned: (String) -> Unit,
-    onUnassignedQrScanned: (String) -> Unit = onExistingBoxScanned
+    onUnassignedQrScanned: (String) -> Unit = onExistingBoxScanned,
+    sensoryFeedbackManager: SensoryFeedbackManager? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val sensoryManager = remember(sensoryFeedbackManager, context) {
+        sensoryFeedbackManager ?: SensoryFeedbackManager(context, UserPreferencesManager(context))
+    }
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -113,10 +121,12 @@ fun QrScannerScreen(
     LaunchedEffect(uiState.resolution) {
         when (val resolution = uiState.resolution) {
             is QrScanResolution.ExistingBoxFound -> {
+                sensoryManager.onScanSuccess(haptic)
                 viewModel.consumeResolution()
                 onExistingBoxScanned(resolution.boxId)
             }
             is QrScanResolution.UnassignedQrLabelScanned -> {
+                sensoryManager.onScanSuccess(haptic)
                 viewModel.consumeResolution()
                 onUnassignedQrScanned(resolution.presetBoxId)
             }
@@ -463,4 +473,3 @@ private fun ScannerReticleOverlay(
         )
     }
 }
-

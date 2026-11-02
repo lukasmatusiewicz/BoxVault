@@ -74,6 +74,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.boxvault.app.data.preferences.UserPreferencesManager
+import com.boxvault.app.util.sensory.SensoryFeedbackManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -101,10 +104,15 @@ fun BoxDetailScreen(
     onNavigateBack: () -> Unit,
     onNavigateToEditBox: (String) -> Unit,
     onNavigateToBulkEntry: (String) -> Unit,
-    onNavigateToPrintQr: (String) -> Unit
+    onNavigateToPrintQr: (String) -> Unit,
+    sensoryFeedbackManager: SensoryFeedbackManager? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val sensoryManager = remember(sensoryFeedbackManager, context) {
+        sensoryFeedbackManager ?: SensoryFeedbackManager(context, UserPreferencesManager(context))
+    }
 
     var showAddOrEditItemDialog by remember { mutableStateOf(false) }
     var itemBeingEdited by remember { mutableStateOf<ItemEntity?>(null) }
@@ -345,7 +353,10 @@ fun BoxDetailScreen(
                             pendingPhotoTargetItemId = null
                             pickImageLauncher.launch("image/*")
                         },
-                        onDeletePhoto = viewModel::deletePhoto
+                        onDeletePhoto = { photoId ->
+                                sensoryManager.onDeleteAction(haptic)
+                                viewModel.deletePhoto(photoId)
+                            }
                     )
                 }
 
@@ -440,17 +451,29 @@ fun BoxDetailScreen(
                         BoxItemRowCard(
                             itemWithPhotos = itemWithPhotos,
                             photoStorageManager = photoStorageManager,
-                            onIncrement = { viewModel.incrementItemQuantity(itemWithPhotos.item) },
-                            onDecrement = { viewModel.decrementItemQuantity(itemWithPhotos.item) },
+                            onIncrement = {
+                                sensoryManager.onQuantityStep(haptic)
+                                viewModel.incrementItemQuantity(itemWithPhotos.item)
+                            },
+                            onDecrement = {
+                                sensoryManager.onQuantityStep(haptic)
+                                viewModel.decrementItemQuantity(itemWithPhotos.item)
+                            },
                             onEdit = {
                                 itemBeingEdited = itemWithPhotos.item
                                 draftItemPhotoBitmap = null
                                 draftItemPhotoBytes = null
                                 showAddOrEditItemDialog = true
                             },
-                            onDelete = { viewModel.deleteItem(itemWithPhotos.item.id) },
+                            onDelete = {
+                                sensoryManager.onDeleteAction(haptic)
+                                viewModel.deleteItem(itemWithPhotos.item.id)
+                            },
                             onPhotoSlotClick = { openItemPhotoSelection(itemWithPhotos) },
-                            onDeletePhoto = viewModel::deletePhoto
+                            onDeletePhoto = { photoId ->
+                                sensoryManager.onDeleteAction(haptic)
+                                viewModel.deletePhoto(photoId)
+                            }
                         )
                     }
                 }
@@ -481,6 +504,7 @@ fun BoxDetailScreen(
             },
             onPhotoSlotClick = openItemEditPhotoSelection,
             onConfirm = { name, qty, category, notes, draftBytes ->
+                sensoryManager.onBulkEntrySubmit(haptic)
                 viewModel.saveItem(
                     name = name,
                     quantity = qty,
@@ -573,6 +597,7 @@ fun BoxDetailScreen(
                 Button(
                     onClick = {
                         showDeleteBoxConfirm = false
+                        sensoryManager.onDeleteAction(haptic)
                         viewModel.deleteBox(onDeleted = onNavigateBack)
                     },
                     colors = ButtonDefaults.buttonColors(

@@ -65,6 +65,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.boxvault.app.util.sensory.SensoryFeedbackManager
 import com.boxvault.app.data.preferences.ThemeMode
 import com.boxvault.app.data.preferences.UserPreferencesManager
 import com.boxvault.app.ui.components.PrivacyPolicyDialog
@@ -91,14 +93,21 @@ fun DashboardScreen(
     onNavigateToQrScanner: () -> Unit,
     onNavigateToPdfGenerator: () -> Unit,
     onNavigateToBackupRestore: () -> Unit,
-    userPreferencesManager: UserPreferencesManager? = null
+    userPreferencesManager: UserPreferencesManager? = null,
+    sensoryFeedbackManager: SensoryFeedbackManager? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resolvedPrefsManager = remember(userPreferencesManager, context) {
         userPreferencesManager ?: UserPreferencesManager(context)
     }
+    val haptic = LocalHapticFeedback.current
+    val sensoryManager = remember(sensoryFeedbackManager, context, resolvedPrefsManager) {
+        sensoryFeedbackManager ?: SensoryFeedbackManager(context, resolvedPrefsManager)
+    }
     val currentThemeMode by resolvedPrefsManager.themeMode.collectAsStateWithLifecycle()
+    val soundEffectsEnabled by resolvedPrefsManager.soundEffectsEnabled.collectAsStateWithLifecycle()
+    val hapticsEnabled by resolvedPrefsManager.hapticsEnabled.collectAsStateWithLifecycle()
     var showThemeDialog by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
     var showCreateRoomDialog by remember { mutableStateOf(false) }
@@ -268,6 +277,7 @@ fun DashboardScreen(
             confirmButton = {
                 Button(
                     onClick = {
+                        sensoryManager.onDeleteAction(haptic)
                         viewModel.deleteRoom(target.id)
                         deletingRoom = null
                     },
@@ -289,8 +299,16 @@ fun DashboardScreen(
     if (showThemeDialog) {
         ThemeSelectionDialog(
             currentThemeMode = currentThemeMode,
+            soundEffectsEnabled = soundEffectsEnabled,
+            hapticsEnabled = hapticsEnabled,
             onThemeSelected = { mode ->
                 resolvedPrefsManager.setThemeMode(mode)
+            },
+            onSoundEffectsToggled = { enabled ->
+                resolvedPrefsManager.setSoundEffectsEnabled(enabled)
+            },
+            onHapticsToggled = { enabled ->
+                resolvedPrefsManager.setHapticsEnabled(enabled)
             },
             onDismiss = { showThemeDialog = false }
         )

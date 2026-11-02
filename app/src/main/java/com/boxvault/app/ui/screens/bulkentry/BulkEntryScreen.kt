@@ -53,7 +53,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.boxvault.app.data.preferences.UserPreferencesManager
+import com.boxvault.app.util.sensory.SensoryFeedbackManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -77,13 +81,20 @@ private val BulkQuickCategories = listOf(
 @Composable
 fun BulkEntryScreen(
     viewModel: BulkEntryViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    sensoryFeedbackManager: SensoryFeedbackManager? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val sensoryManager = remember(sensoryFeedbackManager, context) {
+        sensoryFeedbackManager ?: SensoryFeedbackManager(context, UserPreferencesManager(context))
+    }
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val triggerSubmitAndMaintainFocus = {
+        sensoryManager.onBulkEntrySubmit(haptic)
         viewModel.submitCurrentItem()
         runCatching { focusRequester.requestFocus() }
         keyboardController?.show()
@@ -229,6 +240,7 @@ fun BulkEntryScreen(
                             )
                             FilledIconButton(
                                 onClick = {
+                                    sensoryManager.onQuantityStep(haptic)
                                     viewModel.decrementDraftQuantity()
                                     runCatching { focusRequester.requestFocus() }
                                 },
@@ -253,6 +265,7 @@ fun BulkEntryScreen(
                             )
                             FilledIconButton(
                                 onClick = {
+                                    sensoryManager.onQuantityStep(haptic)
                                     viewModel.incrementDraftQuantity()
                                     runCatching { focusRequester.requestFocus() }
                                 },
@@ -276,6 +289,7 @@ fun BulkEntryScreen(
                                 FilterChip(
                                     selected = uiState.quantityInput == preset,
                                     onClick = {
+                                        sensoryManager.onQuantityStep(haptic)
                                         viewModel.onQuantityChange(preset)
                                         runCatching { focusRequester.requestFocus() }
                                     },
@@ -389,10 +403,12 @@ fun BulkEntryScreen(
                         SessionAddedItemRow(
                             item = sessionItem,
                             onBumpQuantity = {
+                                sensoryManager.onQuantityStep(haptic)
                                 viewModel.bumpSessionItemQuantity(sessionItem.id)
                                 runCatching { focusRequester.requestFocus() }
                             },
                             onUndo = {
+                                sensoryManager.onDeleteAction(haptic)
                                 viewModel.undoSessionItem(sessionItem.id)
                                 runCatching { focusRequester.requestFocus() }
                             }

@@ -31,7 +31,8 @@ class MainActivity : ComponentActivity() {
                         repository = app.repository,
                         photoStorageManager = app.photoStorageManager,
                         backupManager = app.backupManager,
-                        userPreferencesManager = app.userPreferencesManager
+                        userPreferencesManager = app.userPreferencesManager,
+                        sensoryFeedbackManager = app.sensoryFeedbackManager
                     )
                 }
             }
