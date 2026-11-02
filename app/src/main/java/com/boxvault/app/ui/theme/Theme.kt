@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import com.boxvault.app.data.preferences.ThemeMode
 
 private val HighContrastDarkColorScheme = darkColorScheme(
     primary = VaultAmberPrimaryDark,
@@ -52,7 +53,12 @@ private val HighContrastLightColorScheme = lightColorScheme(
 
 @Composable
 fun BoxVaultTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    darkTheme: Boolean = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    },
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) {

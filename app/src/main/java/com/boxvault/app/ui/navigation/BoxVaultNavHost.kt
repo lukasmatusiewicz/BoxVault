@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.boxvault.app.data.backup.BackupManager
+import com.boxvault.app.data.preferences.UserPreferencesManager
 import com.boxvault.app.data.repository.BoxVaultRepository
 import com.boxvault.app.data.storage.PhotoStorageManager
 import com.boxvault.app.ui.screens.backup.BackupRestoreScreen
@@ -35,6 +36,7 @@ fun BoxVaultNavHost(
     photoStorageManager: PhotoStorageManager,
     modifier: Modifier = Modifier,
     backupManager: BackupManager? = null,
+    userPreferencesManager: UserPreferencesManager? = null,
     navController: NavHostController = rememberNavController(),
     qrScannerContent: (@Composable (onNavigateBack: () -> Unit, onBoxScanned: (String) -> Unit) -> Unit)? = null,
     pdfGeneratorContent: (@Composable (initialBoxId: String?, onNavigateBack: () -> Unit) -> Unit)? = null,
@@ -48,6 +50,9 @@ fun BoxVaultNavHost(
             photoStorageManager = photoStorageManager
         )
     }
+    val resolvedUserPreferencesManager = remember(userPreferencesManager, context) {
+        userPreferencesManager ?: UserPreferencesManager(context)
+    }
 
     NavHost(
         navController = navController,
@@ -60,6 +65,7 @@ fun BoxVaultNavHost(
             )
             DashboardScreen(
                 viewModel = dashboardViewModel,
+                userPreferencesManager = resolvedUserPreferencesManager,
                 onNavigateToCreateBox = {
                     navController.navigate(BoxVaultDestinations.boxEditRoute(null))
                 },

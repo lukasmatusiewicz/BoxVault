@@ -3,10 +3,15 @@ package com.boxvault.app
 import android.app.Application
 import com.boxvault.app.data.backup.BackupManager
 import com.boxvault.app.data.local.BoxVaultDatabase
+import com.boxvault.app.data.preferences.UserPreferencesManager
 import com.boxvault.app.data.repository.BoxVaultRepository
 import com.boxvault.app.data.storage.PhotoStorageManager
 
 class BoxVaultApplication : Application() {
+
+    val userPreferencesManager: UserPreferencesManager by lazy {
+        UserPreferencesManager(this)
+    }
 
     val database: BoxVaultDatabase by lazy {
         BoxVaultDatabase.getInstance(this)

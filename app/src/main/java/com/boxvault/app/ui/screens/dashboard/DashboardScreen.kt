@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
@@ -62,6 +63,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.boxvault.app.data.preferences.ThemeMode
+import com.boxvault.app.data.preferences.UserPreferencesManager
+import com.boxvault.app.ui.components.ThemeSelectionDialog
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,9 +88,16 @@ fun DashboardScreen(
     onNavigateToBulkEntry: (String) -> Unit,
     onNavigateToQrScanner: () -> Unit,
     onNavigateToPdfGenerator: () -> Unit,
-    onNavigateToBackupRestore: () -> Unit
+    onNavigateToBackupRestore: () -> Unit,
+    userPreferencesManager: UserPreferencesManager? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val resolvedPrefsManager = remember(userPreferencesManager, context) {
+        userPreferencesManager ?: UserPreferencesManager(context)
+    }
+    val currentThemeMode by resolvedPrefsManager.themeMode.collectAsStateWithLifecycle()
+    var showThemeDialog by remember { mutableStateOf(false) }
     var showCreateRoomDialog by remember { mutableStateOf(false) }
     var editingRoom by remember { mutableStateOf<RoomEntity?>(null) }
     var deletingRoom by remember { mutableStateOf<RoomEntity?>(null) }
@@ -108,6 +120,12 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showThemeDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = "Select Theme Mode"
+                        )
+                    }
                     IconButton(onClick = onNavigateToQrScanner) {
                         Icon(
                             imageVector = Icons.Default.QrCodeScanner,
@@ -263,6 +281,16 @@ fun DashboardScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+
+    if (showThemeDialog) {
+        ThemeSelectionDialog(
+            currentThemeMode = currentThemeMode,
+            onThemeSelected = { mode ->
+                resolvedPrefsManager.setThemeMode(mode)
+            },
+            onDismiss = { showThemeDialog = false }
         )
     }
 }
