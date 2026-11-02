@@ -29,7 +29,23 @@ class PhotoStorageManagerTest {
     }
 
     @Test
-    fun `savePhotoBytes writes inside photos directory and reads back identically`() = runTest {
+    fun `savePhotoBytes default writes webp inside photos directory and reads back identically`() = runTest {
+        val payload = byteArrayOf(0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50)
+        val relativePath = storageManager.savePhotoBytes(payload, prefix = "box")
+
+        assertTrue(relativePath.startsWith("box_"))
+        assertTrue(relativePath.endsWith(".webp"))
+        assertTrue(storageManager.photoExists(relativePath))
+
+        val resolvedFile = storageManager.resolvePhotoFile(relativePath)
+        assertEquals(storageManager.photosDirectory.canonicalFile, resolvedFile.parentFile?.canonicalFile)
+
+        val readBack = storageManager.readPhotoBytes(relativePath)
+        assertArrayEquals(payload, readBack)
+    }
+
+    @Test
+    fun `savePhotoBytes with custom png extension writes png inside photos directory`() = runTest {
         val payload = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
         val relativePath = storageManager.savePhotoBytes(payload, prefix = "box", extension = "png")
 
@@ -46,19 +62,34 @@ class PhotoStorageManagerTest {
 
     @Test
     fun `savePhotoStream writes stream contents and deletePhotoFile removes file`() = runTest {
-        val content = "sample-jpeg-binary-stream".encodeToByteArray()
+        val content = "sample-webp-binary-stream".encodeToByteArray()
         val relativePath = storageManager.savePhotoStream(
             inputStream = ByteArrayInputStream(content),
-            prefix = "item",
-            extension = "jpg"
+            prefix = "item"
         )
 
+        assertTrue(relativePath.endsWith(".webp"))
         assertTrue(storageManager.photoExists(relativePath))
         assertArrayEquals(content, storageManager.readPhotoBytes(relativePath))
 
         val deleted = storageManager.deletePhotoFile(relativePath)
         assertTrue(deleted)
         assertFalse(storageManager.photoExists(relativePath))
+    }
+
+    @Test
+    fun `resolvePhotoFile and readPhotoBytes backward compatibility resolves existing jpg files`() = runTest {
+        val legacyJpgBytes = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xE0.toByte())
+        val legacyName = "box_legacy_test.jpg"
+        storageManager.writePhotoBytesAtRelativePath(legacyName, legacyJpgBytes)
+
+        assertTrue(storageManager.photoExists(legacyName))
+        assertArrayEquals(legacyJpgBytes, storageManager.readPhotoBytes(legacyName))
+
+        // Backward compatibility: resolving with .webp falls back to existing .jpg file
+        val resolvedWebpFallback = storageManager.resolvePhotoFile("box_legacy_test.webp")
+        assertEquals("box_legacy_test.jpg", resolvedWebpFallback.name)
+        assertTrue(resolvedWebpFallback.exists())
     }
 
     @Test

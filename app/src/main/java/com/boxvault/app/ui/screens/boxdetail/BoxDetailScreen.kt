@@ -1,6 +1,9 @@
 package com.boxvault.app.ui.screens.boxdetail
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -71,6 +74,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.data.local.entity.BoxEntity
 import com.boxvault.app.data.local.entity.ItemEntity
@@ -78,8 +82,13 @@ import com.boxvault.app.data.local.entity.PhotoEntity
 import com.boxvault.app.data.local.model.ItemWithPhotos
 import com.boxvault.app.data.storage.PhotoStorageManager
 import com.boxvault.app.ui.components.LocalPhotoThumbnail
+import com.boxvault.app.ui.components.PhotoSlotCard
+import com.boxvault.app.ui.components.PhotoSourceSelectionDialog
 import com.boxvault.app.ui.theme.parseBoxColor
 import com.boxvault.app.util.qr.QrCodeGenerator
+import java.io.ByteArrayOutputStream
+
+private const val DRAFT_ITEM_PHOTO_TARGET = "__DRAFT_NEW_ITEM_PHOTO__"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,12 +109,32 @@ fun BoxDetailScreen(
     var showQrPreviewDialog by remember { mutableStateOf(false) }
     var pendingPhotoTargetItemId by remember { mutableStateOf<String?>(null) }
 
+    // Draft photo state for ItemEditDialog (when adding a brand-new item)
+    var draftItemPhotoBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var draftItemPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
+
+    // Unified Photo Source Selection Dialog state
+    var showPhotoSourceDialog by remember { mutableStateOf(false) }
+    var photoSourceTitle by remember { mutableStateOf("Select Photo Source") }
+    var photoSourceTargetItemId by remember { mutableStateOf<String?>(null) }
+    var photoSourceHasExistingPhoto by remember { mutableStateOf(false) }
+    var photoSourceOnRemovePhoto by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    var showCameraRationaleDialog by remember { mutableStateOf(false) }
+
     // Camera capture launcher (100% local photo -> background IO processing in ViewModel)
     val takePicturePreviewLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
         if (bitmap != null) {
-            viewModel.attachPhotoFromBitmap(bitmap, pendingPhotoTargetItemId)
+            if (pendingPhotoTargetItemId == DRAFT_ITEM_PHOTO_TARGET) {
+                draftItemPhotoBitmap = bitmap
+                val stream = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                draftItemPhotoBytes = stream.toByteArray()
+            } else {
+                viewModel.attachPhotoFromBitmap(bitmap, pendingPhotoTargetItemId)
+            }
         }
         pendingPhotoTargetItemId = null
     }
@@ -115,9 +144,87 @@ fun BoxDetailScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            viewModel.attachPhotoFromUri(context.contentResolver, uri, pendingPhotoTargetItemId)
+            if (pendingPhotoTargetItemId == DRAFT_ITEM_PHOTO_TARGET) {
+                runCatching {
+                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    if (bytes != null) {
+                        draftItemPhotoBytes = bytes
+                        draftItemPhotoBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    }
+                }
+            } else {
+                viewModel.attachPhotoFromUri(context.contentResolver, uri, pendingPhotoTargetItemId)
+            }
         }
         pendingPhotoTargetItemId = null
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            takePicturePreviewLauncher.launch(null)
+        } else {
+            showCameraRationaleDialog = true
+        }
+    }
+
+    val launchCameraWithPermissionCheck: (String?) -> Unit = { targetItemId ->
+        pendingPhotoTargetItemId = targetItemId
+        val permissionCheck = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        )
+        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+            takePicturePreviewLauncher.launch(null)
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    val openBoxPhotoSelection = {
+        photoSourceTargetItemId = null
+        photoSourceTitle = "Select Box Photo"
+        val firstPhoto = uiState.boxLevelPhotos.firstOrNull()
+        photoSourceHasExistingPhoto = firstPhoto != null
+        photoSourceOnRemovePhoto = firstPhoto?.let { p -> { viewModel.deletePhoto(p.id) } }
+        showPhotoSourceDialog = true
+    }
+
+    val openItemPhotoSelection: (ItemWithPhotos) -> Unit = { itemWithPhotos ->
+        val firstPhoto = itemWithPhotos.photos.firstOrNull()
+        photoSourceTargetItemId = itemWithPhotos.item.id
+        photoSourceTitle = "Select Photo for ${itemWithPhotos.item.name}"
+        photoSourceHasExistingPhoto = firstPhoto != null
+        photoSourceOnRemovePhoto = firstPhoto?.let { p -> { viewModel.deletePhoto(p.id) } }
+        showPhotoSourceDialog = true
+    }
+
+    val openItemEditPhotoSelection = {
+        if (itemBeingEdited != null) {
+            val existingPhotos = uiState.itemsWithPhotos
+                .firstOrNull { it.item.id == itemBeingEdited?.id }
+                ?.photos.orEmpty()
+            val firstPhoto = existingPhotos.firstOrNull()
+            photoSourceTargetItemId = itemBeingEdited?.id
+            photoSourceTitle = "Item Photo"
+            photoSourceHasExistingPhoto = firstPhoto != null || draftItemPhotoBytes != null
+            photoSourceOnRemovePhoto = {
+                draftItemPhotoBitmap = null
+                draftItemPhotoBytes = null
+                firstPhoto?.let { viewModel.deletePhoto(it.id) }
+            }
+            showPhotoSourceDialog = true
+        } else {
+            photoSourceTargetItemId = DRAFT_ITEM_PHOTO_TARGET
+            photoSourceTitle = "Item Photo"
+            photoSourceHasExistingPhoto = draftItemPhotoBytes != null
+            photoSourceOnRemovePhoto = {
+                draftItemPhotoBitmap = null
+                draftItemPhotoBytes = null
+            }
+            showPhotoSourceDialog = true
+        }
     }
 
     val box = uiState.box
@@ -202,13 +309,16 @@ fun BoxDetailScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             if (box != null) {
-                // Box Metadata & QR Payload Header Card
+                // Box Metadata & QR Payload Header Card with prominent Photo Slot
                 item {
                     BoxHeaderCard(
                         box = box,
+                        primaryPhoto = uiState.boxLevelPhotos.firstOrNull(),
+                        photoStorageManager = photoStorageManager,
                         distinctItemCount = uiState.distinctItemCount,
                         totalQuantity = uiState.totalQuantity,
                         photoCount = uiState.boxWithDetails?.photos?.size ?: 0,
+                        onPhotoSlotClick = openBoxPhotoSelection,
                         onShowQrModal = { showQrPreviewDialog = true }
                     )
                 }
@@ -226,10 +336,7 @@ fun BoxDetailScreen(
                     BoxPhotosSection(
                         photos = uiState.boxLevelPhotos,
                         photoStorageManager = photoStorageManager,
-                        onCapturePhoto = {
-                            pendingPhotoTargetItemId = null
-                            takePicturePreviewLauncher.launch(null)
-                        },
+                        onCapturePhoto = { launchCameraWithPermissionCheck(null) },
                         onPickPhoto = {
                             pendingPhotoTargetItemId = null
                             pickImageLauncher.launch("image/*")
@@ -254,6 +361,8 @@ fun BoxDetailScreen(
                             AssistChip(
                                 onClick = {
                                     itemBeingEdited = null
+                                    draftItemPhotoBitmap = null
+                                    draftItemPhotoBytes = null
                                     showAddOrEditItemDialog = true
                                 },
                                 label = { Text("Add 1 Item") },
@@ -331,13 +440,12 @@ fun BoxDetailScreen(
                             onDecrement = { viewModel.decrementItemQuantity(itemWithPhotos.item) },
                             onEdit = {
                                 itemBeingEdited = itemWithPhotos.item
+                                draftItemPhotoBitmap = null
+                                draftItemPhotoBytes = null
                                 showAddOrEditItemDialog = true
                             },
                             onDelete = { viewModel.deleteItem(itemWithPhotos.item.id) },
-                            onAttachPhoto = {
-                                pendingPhotoTargetItemId = itemWithPhotos.item.id
-                                takePicturePreviewLauncher.launch(null)
-                            },
+                            onPhotoSlotClick = { openItemPhotoSelection(itemWithPhotos) },
                             onDeletePhoto = viewModel::deletePhoto
                         )
                     }
@@ -347,22 +455,92 @@ fun BoxDetailScreen(
     }
 
     if (showAddOrEditItemDialog) {
+        val existingPhotos = if (itemBeingEdited != null) {
+            uiState.itemsWithPhotos
+                .firstOrNull { it.item.id == itemBeingEdited?.id }
+                ?.photos.orEmpty()
+        } else {
+            emptyList()
+        }
+
         ItemEditDialog(
             initialItem = itemBeingEdited,
+            existingPhotos = existingPhotos,
+            photoStorageManager = photoStorageManager,
+            draftBitmap = draftItemPhotoBitmap,
+            draftPhotoBytes = draftItemPhotoBytes,
             onDismiss = {
                 showAddOrEditItemDialog = false
                 itemBeingEdited = null
+                draftItemPhotoBitmap = null
+                draftItemPhotoBytes = null
             },
-            onConfirm = { name, qty, category, notes ->
+            onPhotoSlotClick = openItemEditPhotoSelection,
+            onConfirm = { name, qty, category, notes, draftBytes ->
                 viewModel.saveItem(
                     name = name,
                     quantity = qty,
                     category = category,
                     notes = notes,
-                    existingItemId = itemBeingEdited?.id
+                    existingItemId = itemBeingEdited?.id,
+                    draftPhotoBytes = draftBytes
                 )
                 showAddOrEditItemDialog = false
                 itemBeingEdited = null
+                draftItemPhotoBitmap = null
+                draftItemPhotoBytes = null
+            }
+        )
+    }
+
+    if (showPhotoSourceDialog) {
+        PhotoSourceSelectionDialog(
+            title = photoSourceTitle,
+            hasExistingPhoto = photoSourceHasExistingPhoto,
+            onDismiss = { showPhotoSourceDialog = false },
+            onTakePhoto = {
+                launchCameraWithPermissionCheck(photoSourceTargetItemId)
+            },
+            onChooseFromGallery = {
+                pendingPhotoTargetItemId = photoSourceTargetItemId
+                pickImageLauncher.launch("image/*")
+            },
+            onRemovePhoto = photoSourceOnRemovePhoto
+        )
+    }
+
+    if (showCameraRationaleDialog) {
+        AlertDialog(
+            onDismissRequest = { showCameraRationaleDialog = false },
+            title = { Text("Camera Permission Required") },
+            text = {
+                Text(
+                    "BoxVault requires camera access to capture photos of your boxes and items locally. " +
+                        "Camera frames are processed entirely on your device and are never shared.\n\n" +
+                        "You can also choose an existing photo from your local gallery instead."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showCameraRationaleDialog = false
+                        pendingPhotoTargetItemId = photoSourceTargetItemId
+                        pickImageLauncher.launch("image/*")
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Choose from Gallery")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCameraRationaleDialog = false }) {
+                    Text("Cancel")
+                }
             }
         )
     }
@@ -412,9 +590,12 @@ fun BoxDetailScreen(
 @Composable
 private fun BoxHeaderCard(
     box: BoxEntity,
+    primaryPhoto: PhotoEntity?,
+    photoStorageManager: PhotoStorageManager,
     distinctItemCount: Int,
     totalQuantity: Int,
     photoCount: Int,
+    onPhotoSlotClick: () -> Unit,
     onShowQrModal: () -> Unit
 ) {
     val accentColor = parseBoxColor(box.colorHex)
@@ -479,34 +660,53 @@ private fun BoxHeaderCard(
                 }
             }
 
-            Text(
-                text = box.name,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold
-            )
-
+            // Dedicated prominent Photo Slot + Box Title & Stats
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Category,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = box.category,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                Text(
-                    text = "• $totalQuantity total qty ($distinctItemCount unique) • $photoCount photos",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                PhotoSlotCard(
+                    photoRelativePath = primaryPhoto?.relativePath,
+                    photoStorageManager = photoStorageManager,
+                    label = if (primaryPhoto == null) "Add Box Photo" else box.name,
+                    size = 80.dp,
+                    onClick = onPhotoSlotClick
                 )
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = box.name,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Category,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = box.category,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        Text(
+                            text = "• $totalQuantity total qty ($distinctItemCount unique)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
             if (box.notes.isNotBlank()) {
@@ -768,7 +968,7 @@ private fun BoxItemRowCard(
     onDecrement: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onAttachPhoto: () -> Unit,
+    onPhotoSlotClick: () -> Unit,
     onDeletePhoto: (String) -> Unit
 ) {
     val item = itemWithPhotos.item
@@ -789,9 +989,18 @@ private fun BoxItemRowCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Item photo slot thumbnail or placeholder
+                PhotoSlotCard(
+                    photoRelativePath = itemWithPhotos.photos.firstOrNull()?.relativePath,
+                    photoStorageManager = photoStorageManager,
+                    label = item.name,
+                    size = 56.dp,
+                    onClick = onPhotoSlotClick
+                )
+
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = item.name,
@@ -855,7 +1064,7 @@ private fun BoxItemRowCard(
                 }
             }
 
-            if (itemWithPhotos.photos.isNotEmpty()) {
+            if (itemWithPhotos.photos.size > 1) {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -866,7 +1075,7 @@ private fun BoxItemRowCard(
                         LocalPhotoThumbnail(
                             relativePath = photo.relativePath,
                             photoStorageManager = photoStorageManager,
-                            size = 68.dp,
+                            size = 56.dp,
                             onDeleteClick = { onDeletePhoto(photo.id) }
                         )
                     }
@@ -878,14 +1087,14 @@ private fun BoxItemRowCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onAttachPhoto) {
+                TextButton(onClick = onPhotoSlotClick) {
                     Icon(
-                        imageVector = Icons.Default.AddAPhoto,
+                        imageVector = if (itemWithPhotos.photos.isNotEmpty()) Icons.Default.Image else Icons.Default.AddAPhoto,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Photo")
+                    Text(if (itemWithPhotos.photos.isNotEmpty()) "Photo (${itemWithPhotos.photos.size})" else "Photo")
                 }
                 TextButton(onClick = onEdit) {
                     Icon(
@@ -914,8 +1123,13 @@ private fun BoxItemRowCard(
 @Composable
 private fun ItemEditDialog(
     initialItem: ItemEntity?,
+    existingPhotos: List<PhotoEntity>,
+    photoStorageManager: PhotoStorageManager,
+    draftBitmap: Bitmap?,
+    draftPhotoBytes: ByteArray?,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, quantity: Int, category: String, notes: String) -> Unit
+    onPhotoSlotClick: () -> Unit,
+    onConfirm: (name: String, quantity: Int, category: String, notes: String, draftPhotoBytes: ByteArray?) -> Unit
 ) {
     var name by remember(initialItem) { mutableStateOf(initialItem?.name ?: "") }
     var quantityText by remember(initialItem) {
@@ -930,7 +1144,25 @@ private fun ItemEditDialog(
             Text(if (initialItem == null) "Add Item to Box" else "Edit Item")
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Dedicated prominent Photo Slot for Item
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    PhotoSlotCard(
+                        photoRelativePath = existingPhotos.firstOrNull()?.relativePath,
+                        photoStorageManager = photoStorageManager,
+                        draftBitmap = draftBitmap,
+                        size = 84.dp,
+                        label = "Item Photo",
+                        onClick = onPhotoSlotClick
+                    )
+                }
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -967,7 +1199,7 @@ private fun ItemEditDialog(
             Button(
                 onClick = {
                     val qty = quantityText.toIntOrNull()?.coerceAtLeast(1) ?: 1
-                    onConfirm(name, qty, category, notes)
+                    onConfirm(name, qty, category, notes, draftPhotoBytes)
                 },
                 enabled = name.trim().isNotEmpty()
             ) {

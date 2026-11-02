@@ -43,6 +43,7 @@ captures/
 .cxx/
 *.keystore
 *.jks
+.kotlin/
 
 # OS-specific files
 .DS_Store

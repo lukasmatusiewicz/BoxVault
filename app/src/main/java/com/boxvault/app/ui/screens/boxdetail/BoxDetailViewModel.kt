@@ -131,7 +131,8 @@ class BoxDetailViewModel(
         quantity: Int = 1,
         category: String = "General",
         notes: String = "",
-        existingItemId: String? = null
+        existingItemId: String? = null,
+        draftPhotoBytes: ByteArray? = null
     ) {
         val trimmedName = name.trim()
         if (trimmedName.isEmpty()) {
@@ -152,20 +153,25 @@ class BoxDetailViewModel(
                             notes = notes.trim()
                         )
                     )
+                    if (draftPhotoBytes != null && draftPhotoBytes.isNotEmpty()) {
+                        repository.attachPhotoToItem(boxId, existing.id, draftPhotoBytes)
+                    }
                 }
             } else {
-                repository.createItem(
+                val created = repository.createItem(
                     boxId = boxId,
                     name = trimmedName,
                     quantity = quantity.coerceAtLeast(1),
                     category = category.trim().ifEmpty { "General" },
                     notes = notes.trim()
                 )
+                if (draftPhotoBytes != null && draftPhotoBytes.isNotEmpty()) {
+                    repository.attachPhotoToItem(boxId, created.id, draftPhotoBytes)
+                }
             }
             _uiState.update { it.copy(errorMessage = null) }
         }
     }
-
     fun deleteItem(itemId: String) {
         viewModelScope.launch {
             repository.deleteItem(itemId)
