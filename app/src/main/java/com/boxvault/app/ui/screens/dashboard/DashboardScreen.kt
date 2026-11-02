@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -66,6 +67,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.boxvault.app.data.preferences.ThemeMode
 import com.boxvault.app.data.preferences.UserPreferencesManager
+import com.boxvault.app.ui.components.PrivacyPolicyDialog
 import com.boxvault.app.ui.components.ThemeSelectionDialog
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
@@ -98,6 +100,7 @@ fun DashboardScreen(
     }
     val currentThemeMode by resolvedPrefsManager.themeMode.collectAsStateWithLifecycle()
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showPrivacyDialog by remember { mutableStateOf(false) }
     var showCreateRoomDialog by remember { mutableStateOf(false) }
     var editingRoom by remember { mutableStateOf<RoomEntity?>(null) }
     var deletingRoom by remember { mutableStateOf<RoomEntity?>(null) }
@@ -113,6 +116,12 @@ fun DashboardScreen(
                     )
                 },
                 actions = {
+                    IconButton(onClick = { showPrivacyDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = "Offline Privacy Policy"
+                        )
+                    }
                     IconButton(onClick = { showThemeDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Palette,
@@ -284,6 +293,12 @@ fun DashboardScreen(
                 resolvedPrefsManager.setThemeMode(mode)
             },
             onDismiss = { showThemeDialog = false }
+        )
+    }
+
+    if (showPrivacyDialog) {
+        PrivacyPolicyDialog(
+            onDismiss = { showPrivacyDialog = false }
         )
     }
 }
