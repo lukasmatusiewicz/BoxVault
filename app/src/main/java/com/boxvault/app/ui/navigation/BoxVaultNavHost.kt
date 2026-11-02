@@ -1,5 +1,10 @@
 package com.boxvault.app.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -84,7 +89,31 @@ fun BoxVaultNavHost(
         NavHost(
             navController = navController,
             startDestination = BoxVaultDestinations.DASHBOARD_ROUTE,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            enterTransition = {
+                fadeIn(animationSpec = tween(250)) + slideInHorizontally(
+                    animationSpec = tween(250),
+                    initialOffsetX = { it / 4 }
+                )
+            },
+            exitTransition = {
+                fadeOut(animationSpec = tween(200)) + slideOutHorizontally(
+                    animationSpec = tween(200),
+                    targetOffsetX = { -it / 4 }
+                )
+            },
+            popEnterTransition = {
+                fadeIn(animationSpec = tween(250)) + slideInHorizontally(
+                    animationSpec = tween(250),
+                    initialOffsetX = { -it / 4 }
+                )
+            },
+            popExitTransition = {
+                fadeOut(animationSpec = tween(200)) + slideOutHorizontally(
+                    animationSpec = tween(200),
+                    targetOffsetX = { it / 4 }
+                )
+            }
         ) {
             composable(route = BoxVaultDestinations.DASHBOARD_ROUTE) {
                 val dashboardViewModel: DashboardViewModel = viewModel(

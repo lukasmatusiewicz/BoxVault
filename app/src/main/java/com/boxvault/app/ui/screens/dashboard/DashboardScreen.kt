@@ -1,5 +1,11 @@
 package com.boxvault.app.ui.screens.dashboard
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +35,8 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MeetingRoom
@@ -59,6 +67,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -335,6 +344,9 @@ private fun DashboardHomeContent(
     onPrintQrSheetClick: () -> Unit,
     onBackupRestoreClick: () -> Unit
 ) {
+    val collapsedRoomIds = remember { mutableStateMapOf<String, Boolean>() }
+    var isUnassignedCollapsed by remember { mutableStateOf(false) }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 96.dp),
@@ -394,44 +406,57 @@ private fun DashboardHomeContent(
         } else {
             // --- ROOM-GROUPED HIERARCHY (1+ rooms exist) ---
             uiState.roomSections.forEach { section ->
+                val isExpanded = !(collapsedRoomIds[section.room.id] ?: false)
                 item(key = "room_header_${section.room.id}") {
                     RoomHeaderCard(
                         room = section.room,
                         boxCount = section.boxCount,
                         totalItems = section.totalItems,
+                        isExpanded = isExpanded,
+                        onToggleExpand = {
+                            collapsedRoomIds[section.room.id] = isExpanded
+                        },
                         onEditRoom = { onEditRoom(section.room) },
                         onDeleteRoom = { onDeleteRoom(section.room) }
                     )
                 }
 
-                if (section.boxes.isEmpty()) {
-                    item(key = "room_empty_${section.room.id}") {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 2.dp)
+                item(key = "room_content_${section.room.id}") {
+                    AnimatedVisibility(
+                        visible = isExpanded,
+                        enter = fadeIn(tween(200)) + expandVertically(),
+                        exit = fadeOut(tween(150)) + shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = "No boxes assigned to this room yet.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(12.dp)
-                            )
+                            if (section.boxes.isEmpty()) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "No boxes assigned to this room yet.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(12.dp)
+                                    )
+                                }
+                            } else {
+                                section.boxes.forEach { summary ->
+                                    BoxSummaryCard(
+                                        summary = summary,
+                                        onClick = { onBoxClick(summary.box.id) },
+                                        onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
+                                        modifier = Modifier.padding(start = 24.dp, end = 16.dp)
+                                    )
+                                }
+                            }
                         }
-                    }
-                } else {
-                    items(
-                        items = section.boxes,
-                        key = { "room_box_${section.room.id}_${it.box.id}" }
-                    ) { summary ->
-                        BoxSummaryCard(
-                            summary = summary,
-                            onClick = { onBoxClick(summary.box.id) },
-                            onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
-                            modifier = Modifier.padding(start = 24.dp, end = 16.dp)
-                        )
                     }
                 }
             }
@@ -440,20 +465,32 @@ private fun DashboardHomeContent(
                 item(key = "unassigned_header") {
                     UnassignedHeaderCard(
                         boxCount = uiState.unassignedBoxes.size,
-                        totalItems = uiState.unassignedBoxes.sumOf { it.itemCount }
+                        totalItems = uiState.unassignedBoxes.sumOf { it.itemCount },
+                        isExpanded = !isUnassignedCollapsed,
+                        onToggleExpand = { isUnassignedCollapsed = !isUnassignedCollapsed }
                     )
                 }
 
-                items(
-                    items = uiState.unassignedBoxes,
-                    key = { "unassigned_box_${it.box.id}" }
-                ) { summary ->
-                    BoxSummaryCard(
-                        summary = summary,
-                        onClick = { onBoxClick(summary.box.id) },
-                        onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
-                        modifier = Modifier.padding(start = 24.dp, end = 16.dp)
-                    )
+                item(key = "unassigned_content") {
+                    AnimatedVisibility(
+                        visible = !isUnassignedCollapsed,
+                        enter = fadeIn(tween(200)) + expandVertically(),
+                        exit = fadeOut(tween(150)) + shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            uiState.unassignedBoxes.forEach { summary ->
+                                BoxSummaryCard(
+                                    summary = summary,
+                                    onClick = { onBoxClick(summary.box.id) },
+                                    onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
+                                    modifier = Modifier.padding(start = 24.dp, end = 16.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -575,6 +612,8 @@ private fun RoomHeaderCard(
     room: RoomEntity,
     boxCount: Int,
     totalItems: Int,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
     onEditRoom: () -> Unit,
     onDeleteRoom: () -> Unit
 ) {
@@ -598,7 +637,9 @@ private fun RoomHeaderCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onToggleExpand)
             ) {
                 Box(
                     modifier = Modifier
@@ -621,7 +662,14 @@ private fun RoomHeaderCard(
                     )
                 }
             }
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onToggleExpand) {
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (isExpanded) "Collapse Room" else "Expand Room",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
                 IconButton(onClick = onEditRoom) {
                     Icon(
                         imageVector = Icons.Default.Edit,
@@ -645,7 +693,9 @@ private fun RoomHeaderCard(
 @Composable
 private fun UnassignedHeaderCard(
     boxCount: Int,
-    totalItems: Int
+    totalItems: Int,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -661,24 +711,39 @@ private fun UnassignedHeaderCard(
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                imageVector = Icons.Default.MeetingRoom,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Column {
-                Text(
-                    text = "Unassigned / General",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onToggleExpand)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MeetingRoom,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = "$boxCount boxes • $totalItems items (no room assigned)",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Column {
+                    Text(
+                        text = "Unassigned / General",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "$boxCount boxes • $totalItems items (no room assigned)",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            IconButton(onClick = onToggleExpand) {
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (isExpanded) "Collapse Unassigned" else "Expand Unassigned",
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }

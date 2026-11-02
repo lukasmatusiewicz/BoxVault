@@ -402,6 +402,7 @@ fun BulkEntryScreen(
                     ) { sessionItem ->
                         SessionAddedItemRow(
                             item = sessionItem,
+                            modifier = Modifier.animateItem(),
                             onBumpQuantity = {
                                 sensoryManager.onQuantityStep(haptic)
                                 viewModel.bumpSessionItemQuantity(sessionItem.id)
@@ -423,11 +424,12 @@ fun BulkEntryScreen(
 @Composable
 private fun SessionAddedItemRow(
     item: ItemEntity,
+    modifier: Modifier = Modifier,
     onBumpQuantity: () -> Unit,
     onUndo: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
