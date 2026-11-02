@@ -1,13 +1,16 @@
 package com.boxvault.app.ui.screens.dashboard
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +35,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -55,9 +59,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -70,7 +76,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -78,11 +86,14 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import com.boxvault.app.util.sensory.SensoryFeedbackManager
 import com.boxvault.app.data.preferences.ThemeMode
 import com.boxvault.app.data.preferences.UserPreferencesManager
+import com.boxvault.app.ui.components.OnboardingDialog
 import com.boxvault.app.ui.components.PrivacyPolicyDialog
 import com.boxvault.app.ui.components.ThemeSelectionDialog
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.boxvault.app.R
@@ -119,11 +130,23 @@ fun DashboardScreen(
     val currentThemeMode by resolvedPrefsManager.themeMode.collectAsStateWithLifecycle()
     val soundEffectsEnabled by resolvedPrefsManager.soundEffectsEnabled.collectAsStateWithLifecycle()
     val hapticsEnabled by resolvedPrefsManager.hapticsEnabled.collectAsStateWithLifecycle()
+    val hasCompletedOnboarding by resolvedPrefsManager.hasCompletedOnboarding.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+
     var showThemeDialog by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
     var showCreateRoomDialog by remember { mutableStateOf(false) }
     var editingRoom by remember { mutableStateOf<RoomEntity?>(null) }
     var deletingRoom by remember { mutableStateOf<RoomEntity?>(null) }
+    var isSpeedDialExpanded by remember { mutableStateOf(false) }
+    var boxToMove by remember { mutableStateOf<BoxSummary?>(null) }
+    var pendingMoveBoxId by remember { mutableStateOf<String?>(null) }
+
+    val fabRotation by animateFloatAsState(
+        targetValue = if (isSpeedDialExpanded) 45f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "fabRotation"
+    )
 
     Scaffold(
         topBar = {
@@ -148,24 +171,6 @@ fun DashboardScreen(
                             contentDescription = stringResource(R.string.dashboard_action_theme)
                         )
                     }
-                    IconButton(onClick = onNavigateToQrScanner) {
-                        Icon(
-                            imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = stringResource(R.string.dashboard_action_scan_qr)
-                        )
-                    }
-                    IconButton(onClick = onNavigateToPdfGenerator) {
-                        Icon(
-                            imageVector = Icons.Default.Print,
-                            contentDescription = stringResource(R.string.dashboard_action_print_pdf)
-                        )
-                    }
-                    IconButton(onClick = onNavigateToBackupRestore) {
-                        Icon(
-                            imageVector = Icons.Default.Backup,
-                            contentDescription = stringResource(R.string.dashboard_action_backup_restore)
-                        )
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
@@ -173,18 +178,66 @@ fun DashboardScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onNavigateToCreateBox,
-                icon = {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                AnimatedVisibility(
+                    visible = isSpeedDialExpanded,
+                    enter = fadeIn(tween(150)) + expandVertically(tween(200)),
+                    exit = fadeOut(tween(150)) + shrinkVertically(tween(200))
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        ExtendedFloatingActionButton(
+                            onClick = {
+                                isSpeedDialExpanded = false
+                                showCreateRoomDialog = true
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.MeetingRoom,
+                                    contentDescription = null
+                                )
+                            },
+                            text = { Text(stringResource(R.string.dashboard_speed_dial_new_room)) },
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        ExtendedFloatingActionButton(
+                            onClick = {
+                                isSpeedDialExpanded = false
+                                onNavigateToCreateBox()
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.Inventory2,
+                                    contentDescription = null
+                                )
+                            },
+                            text = { Text(stringResource(R.string.dashboard_speed_dial_new_box)) },
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+                FloatingActionButton(
+                    onClick = { isSpeedDialExpanded = !isSpeedDialExpanded },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = null
+                        contentDescription = stringResource(
+                            if (isSpeedDialExpanded) R.string.dashboard_speed_dial_close else R.string.dashboard_speed_dial_open
+                        ),
+                        modifier = Modifier.rotate(fabRotation)
                     )
-                },
-                text = { Text(stringResource(R.string.dashboard_fab_new_box)) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
+                }
+            }
         }
     ) { innerPadding ->
         Column(
@@ -235,6 +288,10 @@ fun DashboardScreen(
                     uiState = uiState,
                     onSelectLocation = viewModel::onSelectLocation,
                     onBoxClick = onNavigateToBoxDetail,
+                    onBoxLongClick = { summary ->
+                        sensoryManager.onActionSuccess(haptic)
+                        boxToMove = summary
+                    },
                     onBulkEntryClick = onNavigateToBulkEntry,
                     onCreateBoxClick = onNavigateToCreateBox,
                     onCreateRoomClick = { showCreateRoomDialog = true },
@@ -252,12 +309,168 @@ fun DashboardScreen(
         QuickCreateRoomDialog(
             title = stringResource(R.string.dashboard_room_create_title),
             confirmButtonText = stringResource(R.string.dashboard_room_create_button),
-            onDismiss = { showCreateRoomDialog = false },
+            onDismiss = {
+                showCreateRoomDialog = false
+                pendingMoveBoxId = null
+            },
             onCreateRoom = { name, colorHex ->
-                viewModel.createRoom(name, colorHex)
+                val targetBoxId = pendingMoveBoxId
+                if (targetBoxId != null) {
+                    viewModel.createRoom(name, colorHex) { newRoomId ->
+                        viewModel.moveBoxToRoom(targetBoxId, newRoomId)
+                    }
+                    pendingMoveBoxId = null
+                } else {
+                    viewModel.createRoom(name, colorHex)
+                }
                 showCreateRoomDialog = false
             }
         )
+    }
+
+    if (boxToMove != null) {
+        val targetBox = boxToMove!!
+        ModalBottomSheet(
+            onDismissRequest = { boxToMove = null }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.dashboard_move_to_room_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = stringResource(R.string.dashboard_move_to_room_subtitle, targetBox.box.name),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Option: Unassigned / None
+                val isUnassigned = targetBox.box.roomId == null
+                Surface(
+                    onClick = {
+                        viewModel.moveBoxToRoom(targetBox.box.id, null)
+                        sensoryManager.onActionSuccess(haptic)
+                        boxToMove = null
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isUnassigned) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MeetingRoom,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.dashboard_move_to_room_unassigned),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (isUnassigned) {
+                            Icon(
+                                imageVector = Icons.Default.CheckBox,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+
+                // All active rooms
+                uiState.rooms.forEach { room ->
+                    val isCurrent = targetBox.box.roomId == room.id
+                    val roomAccent = parseBoxColor(room.colorHex)
+                    Surface(
+                        onClick = {
+                            viewModel.moveBoxToRoom(targetBox.box.id, room.id)
+                            sensoryManager.onActionSuccess(haptic)
+                            boxToMove = null
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isCurrent) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(roomAccent)
+                            )
+                            Text(
+                                text = room.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isCurrent) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckBox,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Inline + New Room Button
+                Button(
+                    onClick = {
+                        val targetId = targetBox.box.id
+                        boxToMove = null
+                        pendingMoveBoxId = targetId
+                        showCreateRoomDialog = true
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.dashboard_move_to_room_new_room))
+                }
+            }
+        }
     }
 
     if (editingRoom != null) {
@@ -330,6 +543,16 @@ fun DashboardScreen(
             onDismiss = { showPrivacyDialog = false }
         )
     }
+
+    if (!hasCompletedOnboarding) {
+        OnboardingDialog(
+            onDismiss = {
+                coroutineScope.launch {
+                    resolvedPrefsManager.setCompletedOnboarding(true)
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -337,6 +560,7 @@ private fun DashboardHomeContent(
     uiState: DashboardUiState,
     onSelectLocation: (String?) -> Unit,
     onBoxClick: (String) -> Unit,
+    onBoxLongClick: (BoxSummary) -> Unit,
     onBulkEntryClick: (String) -> Unit,
     onCreateBoxClick: () -> Unit,
     onCreateRoomClick: () -> Unit,
@@ -363,8 +587,7 @@ private fun DashboardHomeContent(
                 totalRooms = uiState.totalRooms,
                 onScanQrClick = onScanQrClick,
                 onPrintQrSheetClick = onPrintQrSheetClick,
-                onBackupRestoreClick = onBackupRestoreClick,
-                onCreateRoomClick = onCreateRoomClick
+                onBackupRestoreClick = onBackupRestoreClick
             )
         }
 
@@ -401,6 +624,7 @@ private fun DashboardHomeContent(
                 BoxSummaryCard(
                     summary = summary,
                     onClick = { onBoxClick(summary.box.id) },
+                    onLongClick = { onBoxLongClick(summary) },
                     onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
@@ -453,6 +677,7 @@ private fun DashboardHomeContent(
                                     BoxSummaryCard(
                                         summary = summary,
                                         onClick = { onBoxClick(summary.box.id) },
+                                        onLongClick = { onBoxLongClick(summary) },
                                         onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
                                         modifier = Modifier.padding(start = 24.dp, end = 16.dp)
                                     )
@@ -487,6 +712,7 @@ private fun DashboardHomeContent(
                                 BoxSummaryCard(
                                     summary = summary,
                                     onClick = { onBoxClick(summary.box.id) },
+                                    onLongClick = { onBoxLongClick(summary) },
                                     onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
                                     modifier = Modifier.padding(start = 24.dp, end = 16.dp)
                                 )
@@ -507,8 +733,7 @@ private fun SummaryStatsBanner(
     totalRooms: Int,
     onScanQrClick: () -> Unit,
     onPrintQrSheetClick: () -> Unit,
-    onBackupRestoreClick: () -> Unit,
-    onCreateRoomClick: () -> Unit
+    onBackupRestoreClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -549,62 +774,71 @@ private fun SummaryStatsBanner(
                 )
             }
 
-            LazyRow(
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                item {
-                    AssistChip(
-                        onClick = onCreateRoomClick,
-                        label = { Text(stringResource(R.string.dashboard_quick_add_room)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    )
-                }
-                item {
-                    AssistChip(
-                        onClick = onScanQrClick,
-                        label = { Text(stringResource(R.string.dashboard_quick_scan_qr)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.QrCodeScanner,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    )
-                }
-                item {
-                    AssistChip(
-                        onClick = onPrintQrSheetClick,
-                        label = { Text(stringResource(R.string.dashboard_quick_print_sheet)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Print,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    )
-                }
-                item {
-                    AssistChip(
-                        onClick = onBackupRestoreClick,
-                        label = { Text(stringResource(R.string.dashboard_quick_backup_zip)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Backup,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    )
-                }
+                UtilityHubCard(
+                    icon = Icons.Default.QrCodeScanner,
+                    label = stringResource(R.string.dashboard_hub_scan_qr),
+                    onClick = onScanQrClick,
+                    modifier = Modifier.weight(1f)
+                )
+                UtilityHubCard(
+                    icon = Icons.Default.Print,
+                    label = stringResource(R.string.dashboard_hub_print_sheet),
+                    onClick = onPrintQrSheetClick,
+                    modifier = Modifier.weight(1f)
+                )
+                UtilityHubCard(
+                    icon = Icons.Default.Backup,
+                    label = stringResource(R.string.dashboard_hub_backup_zip),
+                    onClick = onBackupRestoreClick,
+                    modifier = Modifier.weight(1f)
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun UtilityHubCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -810,10 +1044,12 @@ private fun LocationFilterRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BoxSummaryCard(
     summary: BoxSummary,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     onQuickBulkEntryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -822,7 +1058,11 @@ private fun BoxSummaryCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clip(RoundedCornerShape(14.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
