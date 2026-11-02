@@ -1,22 +1,33 @@
 package com.boxvault.app.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.UUID
 
 @Entity(
     tableName = "boxes",
+    foreignKeys = [
+        ForeignKey(
+            entity = RoomEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["roomId"],
+            onDelete = ForeignKey.SET_NULL
+        )
+    ],
     indices = [
         Index(value = ["shortCode"], unique = true),
         Index(value = ["name"]),
         Index(value = ["location"]),
-        Index(value = ["category"])
+        Index(value = ["category"]),
+        Index(value = ["roomId"])
     ]
 )
 data class BoxEntity(
     @PrimaryKey
     val id: String = UUID.randomUUID().toString(),
+    val roomId: String? = null,
     val shortCode: String,
     val name: String,
     val location: String,
@@ -47,4 +58,3 @@ data class BoxEntity(
         }
     }
 }
-

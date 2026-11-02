@@ -66,6 +66,40 @@ interface BoxDao {
     fun observeBoxSummaries(): Flow<List<BoxSummary>>
 
     @Transaction
+    @Query("SELECT * FROM boxes WHERE roomId = :roomId ORDER BY updatedAt DESC")
+    fun observeBoxesByRoom(roomId: String): Flow<List<BoxWithItemsAndPhotos>>
+
+    @Transaction
+    @Query("SELECT * FROM boxes WHERE roomId IS NULL ORDER BY updatedAt DESC")
+    fun observeUnassignedBoxes(): Flow<List<BoxWithItemsAndPhotos>>
+
+    @Query(
+        """
+        SELECT b.*,
+               (SELECT COUNT(*) FROM items i WHERE i.boxId = b.id) AS itemCount,
+               (SELECT COALESCE(SUM(i.quantity), 0) FROM items i WHERE i.boxId = b.id) AS totalQuantity,
+               (SELECT COUNT(*) FROM photos p WHERE p.boxId = b.id) AS photoCount
+        FROM boxes b
+        WHERE b.roomId = :roomId
+        ORDER BY b.updatedAt DESC
+        """
+    )
+    fun observeBoxSummariesByRoom(roomId: String): Flow<List<BoxSummary>>
+
+    @Query(
+        """
+        SELECT b.*,
+               (SELECT COUNT(*) FROM items i WHERE i.boxId = b.id) AS itemCount,
+               (SELECT COALESCE(SUM(i.quantity), 0) FROM items i WHERE i.boxId = b.id) AS totalQuantity,
+               (SELECT COUNT(*) FROM photos p WHERE p.boxId = b.id) AS photoCount
+        FROM boxes b
+        WHERE b.roomId IS NULL
+        ORDER BY b.updatedAt DESC
+        """
+    )
+    fun observeUnassignedBoxSummaries(): Flow<List<BoxSummary>>
+
+    @Transaction
     @Query(
         """
         SELECT * FROM boxes
@@ -94,6 +128,12 @@ interface BoxDao {
 
     @Query("SELECT * FROM boxes ORDER BY createdAt ASC")
     suspend fun getAllBoxes(): List<BoxEntity>
+
+    @Query("SELECT * FROM boxes WHERE roomId = :roomId")
+    suspend fun getBoxesByRoom(roomId: String): List<BoxEntity>
+
+    @Query("SELECT * FROM boxes WHERE roomId IS NULL")
+    suspend fun getUnassignedBoxes(): List<BoxEntity>
 
     @Query("DELETE FROM boxes")
     suspend fun deleteAllBoxes()
