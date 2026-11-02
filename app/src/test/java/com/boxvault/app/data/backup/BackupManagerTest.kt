@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.boxvault.app.data.local.BoxVaultDatabase
 import com.boxvault.app.data.local.entity.BoxEntity
 import com.boxvault.app.data.local.entity.ItemEntity
+import com.boxvault.app.data.local.entity.RoomEntity
 import com.boxvault.app.data.local.entity.PhotoEntity
 import com.boxvault.app.data.repository.BoxVaultRepository
 import com.boxvault.app.data.storage.PhotoStorageManager
@@ -14,7 +15,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -25,6 +25,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
@@ -70,7 +71,8 @@ class BackupManagerTest {
             itemDao = database.itemDao(),
             photoDao = database.photoDao(),
             photoStorageManager = photoStorageManager,
-            boxVaultDatabase = database
+            boxVaultDatabase = database,
+            roomDao = database.roomDao()
         )
         backupManager = BackupManager(
             repository = repository,
@@ -89,11 +91,16 @@ class BackupManagerTest {
     }
 
     @Test
-    fun `export and atomic staged restore round-trip preserves all boxes, items, and photo bytes`() = runTest(testDispatcher) {
-        // 1. Seed initial inventory with boxes, items, and photos
+    fun `export and atomic staged restore round-trip preserves all rooms, boxes, items, and photo bytes`() = runTest(testDispatcher) {
+        // 1. Seed initial inventory with rooms, boxes, items, and photos
+        val room1 = repository.createRoom(
+            name = "Main Garage",
+            colorHex = "#10B981"
+        )
         val box1 = repository.upsertBox(
             BoxEntity(
                 id = "box-uuid-1",
+                roomId = room1.id,
                 shortCode = "BOX-001",
                 name = "Garage Power Tools",
                 location = "Garage Rack 1",
@@ -135,6 +142,7 @@ class BackupManagerTest {
         // 2. Export backup to ZIP byte array
         val zipOutput = ByteArrayOutputStream()
         val exportSummary = backupManager.exportBackupToZip(zipOutput)
+        assertEquals(1, exportSummary.roomCount)
         assertEquals(1, exportSummary.boxCount)
         assertEquals(1, exportSummary.itemCount)
         assertEquals(2, exportSummary.photoCount)
@@ -144,6 +152,7 @@ class BackupManagerTest {
 
         // 3. Wipe live database and live photos (and insert decoy box to prove full atomic replacement)
         repository.deleteBox(box1.id)
+        repository.deleteRoom(room1.id)
         repository.upsertBox(
             BoxEntity(
                 id = "decoy-box",
@@ -157,15 +166,23 @@ class BackupManagerTest {
 
         // 4. Restore from ZIP archive
         val restoreSummary = backupManager.restoreBackupFromZip(ByteArrayInputStream(archiveBytes))
+        assertEquals(1, restoreSummary.roomCount)
         assertEquals(1, restoreSummary.boxCount)
         assertEquals(1, restoreSummary.itemCount)
         assertEquals(2, restoreSummary.photoCount)
 
         // 5. Verify restored database rows and physical photo bytes match 100%
+        val restoredRooms = repository.getAllRooms()
+        assertEquals(1, restoredRooms.size)
+        assertEquals(room1.id, restoredRooms.first().id)
+        assertEquals("Main Garage", restoredRooms.first().name)
+        assertEquals("#10B981", restoredRooms.first().colorHex)
+
         val restoredBoxes = repository.getAllBoxes()
         assertEquals(1, restoredBoxes.size)
         assertEquals("BOX-001", restoredBoxes.first().shortCode)
         assertEquals("Garage Power Tools", restoredBoxes.first().name)
+        assertEquals(room1.id, restoredBoxes.first().roomId)
 
         val restoredItems = repository.getAllItems()
         assertEquals(1, restoredItems.size)
@@ -179,6 +196,58 @@ class BackupManagerTest {
 
         // 6. Verify staging directory was cleaned up in finally block
         assertFalse(backupManager.stagingDirectory.exists())
+    }
+
+    @Test
+    fun `restoreBackupFromZip successfully restores legacy schemaVersion 1 backups without rooms`() = runTest(testDispatcher) {
+        val legacyManifest = JSONObject().apply {
+            put("schemaVersion", 1)
+            put("appVersion", "1.0.0")
+            put("exportedAt", System.currentTimeMillis())
+            put(
+                "boxes",
+                JSONArray().put(
+                    JSONObject().apply {
+                        put("id", "legacy-box-1")
+                        put("shortCode", "BOX-LEGACY")
+                        put("name", "Legacy Attic Box")
+                        put("location", "Attic Shelf")
+                        put("category", "General")
+                        put("colorHex", "#F59E0B")
+                        put("notes", "Restored from version 1 backup")
+                    }
+                )
+            )
+            put(
+                "items",
+                JSONArray().put(
+                    JSONObject().apply {
+                        put("id", "legacy-item-1")
+                        put("boxId", "legacy-box-1")
+                        put("name", "Vintage Radio")
+                        put("quantity", 1)
+                    }
+                )
+            )
+            put("photos", JSONArray())
+        }
+
+        val zipBuffer = ByteArrayOutputStream()
+        ZipOutputStream(zipBuffer).use { zipOut ->
+            zipOut.putNextEntry(ZipEntry(BackupManager.MANIFEST_FILE_NAME))
+            zipOut.write(legacyManifest.toString().toByteArray(Charsets.UTF_8))
+            zipOut.closeEntry()
+        }
+
+        val summary = backupManager.restoreBackupFromZip(ByteArrayInputStream(zipBuffer.toByteArray()))
+        assertEquals(0, summary.roomCount)
+        assertEquals(1, summary.boxCount)
+        assertEquals(1, summary.itemCount)
+
+        val boxes = repository.getAllBoxes()
+        assertEquals(1, boxes.size)
+        assertEquals("BOX-LEGACY", boxes.first().shortCode)
+        assertNull(boxes.first().roomId) // Unassigned because legacy backup had no rooms
     }
 
     @Test
@@ -241,7 +310,7 @@ class BackupManagerTest {
         val wrongSha256 = "0000000000000000000000000000000000000000000000000000000000000000"
 
         val manifestJson = JSONObject().apply {
-            put("schemaVersion", 1)
+            put("schemaVersion", 2)
             put("exportedAt", System.currentTimeMillis())
             put(
                 "boxes",

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.boxvault.app.data.local.entity.BoxEntity
+import com.boxvault.app.data.local.entity.RoomEntity
 import com.boxvault.app.data.repository.BoxVaultRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +18,8 @@ data class BoxEditUiState(
     val isEditMode: Boolean = false,
     val isPreAllocatedQrLabel: Boolean = false,
     val boxId: String = UUID.randomUUID().toString(),
+    val roomId: String? = null,
+    val availableRooms: List<RoomEntity> = emptyList(),
     val shortCode: String = "",
     val name: String = "",
     val location: String = "",
@@ -59,6 +62,12 @@ class BoxEditViewModel(
         }
 
         viewModelScope.launch {
+            repository.observeAllRooms().collect { rooms ->
+                _uiState.update { it.copy(availableRooms = rooms) }
+            }
+        }
+
+        viewModelScope.launch {
             val targetId = effectiveTargetId
             if (targetId != null) {
                 val existing = repository.getBoxById(targetId)
@@ -69,6 +78,7 @@ class BoxEditViewModel(
                             isEditMode = true,
                             isPreAllocatedQrLabel = false,
                             boxId = existing.id,
+                            roomId = existing.roomId,
                             shortCode = existing.shortCode,
                             name = existing.name,
                             location = existing.location,
@@ -110,6 +120,24 @@ class BoxEditViewModel(
 
     fun onNameChange(name: String) {
         _uiState.update { it.copy(name = name, errorMessage = null) }
+    }
+
+    fun onRoomSelected(roomId: String?) {
+        _uiState.update { it.copy(roomId = roomId, errorMessage = null) }
+    }
+
+    fun createRoomInline(
+        name: String,
+        colorHex: String = "#3B82F6",
+        onCreated: (RoomEntity) -> Unit = {}
+    ) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch {
+            val newRoom = repository.createRoom(name = trimmed, colorHex = colorHex)
+            _uiState.update { it.copy(roomId = newRoom.id) }
+            onCreated(newRoom)
+        }
     }
 
     fun onLocationChange(location: String) {
@@ -162,6 +190,7 @@ class BoxEditViewModel(
             val saved = repository.upsertBox(
                 BoxEntity(
                     id = snapshot.boxId,
+                    roomId = snapshot.roomId,
                     shortCode = trimmedShortCode,
                     name = trimmedName,
                     location = trimmedLocation,

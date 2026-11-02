@@ -20,6 +20,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -58,7 +59,9 @@ class BoxEditAndDetailViewModelTest {
             boxDao = database.boxDao(),
             itemDao = database.itemDao(),
             photoDao = database.photoDao(),
-            photoStorageManager = photoStorageManager
+            photoStorageManager = photoStorageManager,
+            boxVaultDatabase = database,
+            roomDao = database.roomDao()
         )
     }
 
@@ -95,6 +98,61 @@ class BoxEditAndDetailViewModelTest {
 
         assertFalse(secondCreateVm.uiState.value.isSaved)
         assertNotNull(secondCreateVm.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `BoxEditViewModel allows assigning an existing room or quick-creating a room inline`() = runTest(testDispatcher) {
+        val existingRoom = repository.createRoom(name = "Workshop Garage", colorHex = "#10B981")
+
+        val createVm = BoxEditViewModel(repository, initialBoxId = null)
+        val stateWithRooms = createVm.uiState.first { it.availableRooms.isNotEmpty() }
+        assertEquals(1, stateWithRooms.availableRooms.size)
+        assertEquals("Workshop Garage", stateWithRooms.availableRooms.first().name)
+
+        // Select existing room
+        createVm.onRoomSelected(existingRoom.id)
+        assertEquals(existingRoom.id, createVm.uiState.value.roomId)
+
+        // Create new room inline
+        createVm.createRoomInline(name = "Attic Storage", colorHex = "#8B5CF6")
+        val stateWithNewRoom = createVm.uiState.first { it.availableRooms.size == 2 }
+        val atticRoom = stateWithNewRoom.availableRooms.first { it.name == "Attic Storage" }
+        assertEquals(atticRoom.id, stateWithNewRoom.roomId)
+
+        // Save box and verify roomId is saved to database
+        createVm.onNameChange("Holiday Inflatables")
+        createVm.saveBox()
+
+        val savedBox = repository.getBoxById(createVm.uiState.value.boxId)
+        assertNotNull(savedBox)
+        assertEquals("Holiday Inflatables", savedBox?.name)
+        assertEquals(atticRoom.id, savedBox?.roomId)
+    }
+
+    @Test
+    fun `BoxEditViewModel loads existing box fields in edit mode and allows editing room`() = runTest(testDispatcher) {
+        val room = repository.createRoom(name = "Pantry", colorHex = "#F59E0B")
+        val existing = repository.createBox(
+            name = "Existing Kitchen Bin",
+            shortCode = "BOX-099",
+            location = "Cabinet",
+            category = "Kitchen",
+            roomId = room.id
+        )
+
+        val editVm = BoxEditViewModel(repository, initialBoxId = existing.id)
+        val state = editVm.uiState.first { !it.isLoading }
+        assertTrue(state.isEditMode)
+        assertEquals("Existing Kitchen Bin", state.name)
+        assertEquals(room.id, state.roomId)
+
+        // Unassign room
+        editVm.onRoomSelected(null)
+        editVm.saveBox()
+
+        val reloaded = repository.getBoxById(existing.id)
+        assertNotNull(reloaded)
+        assertNull(reloaded?.roomId)
     }
 
     @Test

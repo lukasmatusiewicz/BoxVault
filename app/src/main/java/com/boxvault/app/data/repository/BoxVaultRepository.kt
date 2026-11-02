@@ -5,14 +5,18 @@ import com.boxvault.app.data.local.BoxVaultDatabase
 import com.boxvault.app.data.local.dao.BoxDao
 import com.boxvault.app.data.local.dao.ItemDao
 import com.boxvault.app.data.local.dao.PhotoDao
+import com.boxvault.app.data.local.dao.RoomDao
 import com.boxvault.app.data.local.entity.BoxEntity
 import com.boxvault.app.data.local.entity.ItemEntity
 import com.boxvault.app.data.local.entity.PhotoEntity
+import com.boxvault.app.data.local.entity.RoomEntity
 import com.boxvault.app.data.local.model.BoxSummary
 import com.boxvault.app.data.local.model.BoxWithItemsAndPhotos
 import com.boxvault.app.data.local.model.GlobalSearchResult
 import com.boxvault.app.data.local.model.ItemWithBox
 import com.boxvault.app.data.local.model.ItemWithPhotos
+import com.boxvault.app.data.local.model.RoomSummary
+import com.boxvault.app.data.local.model.RoomWithBoxes
 import com.boxvault.app.data.storage.PhotoStorageManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -24,14 +28,88 @@ class BoxVaultRepository(
     private val itemDao: ItemDao,
     private val photoDao: PhotoDao,
     private val photoStorageManager: PhotoStorageManager,
-    private val boxVaultDatabase: BoxVaultDatabase? = null
+    private val boxVaultDatabase: BoxVaultDatabase? = null,
+    roomDao: RoomDao? = null
 ) {
+    private val roomDao: RoomDao? = roomDao ?: boxVaultDatabase?.roomDao()
+
+    // --- Room Operations ---
+
+    fun observeAllRooms(): Flow<List<RoomEntity>> =
+        roomDao?.observeAllRooms() ?: flowOf(emptyList())
+
+    suspend fun getAllRooms(): List<RoomEntity> =
+        roomDao?.getAllRooms() ?: emptyList()
+
+    fun observeRoomsWithBoxes(): Flow<List<RoomWithBoxes>> =
+        roomDao?.observeRoomsWithBoxes() ?: flowOf(emptyList())
+
+    fun observeRoomSummaries(): Flow<List<RoomSummary>> =
+        roomDao?.observeRoomSummaries() ?: flowOf(emptyList())
+
+    fun observeRoomById(roomId: String): Flow<RoomEntity?> =
+        roomDao?.observeRoomById(roomId) ?: flowOf(null)
+
+    suspend fun getRoomById(roomId: String): RoomEntity? =
+        roomDao?.getRoomById(roomId)
+
+    fun observeRoomCount(): Flow<Int> =
+        roomDao?.observeRoomCount() ?: flowOf(0)
+
+    suspend fun getRoomCount(): Int =
+        roomDao?.getRoomCount() ?: 0
+
+    suspend fun createRoom(
+        name: String,
+        colorHex: String = "#3B82F6",
+        iconName: String = "room"
+    ): RoomEntity {
+        return upsertRoom(
+            RoomEntity(
+                name = name.trim(),
+                colorHex = colorHex.trim().ifEmpty { "#3B82F6" },
+                iconName = iconName.trim().ifEmpty { "room" }
+            )
+        )
+    }
+
+    suspend fun upsertRoom(room: RoomEntity): RoomEntity {
+        val now = System.currentTimeMillis()
+        val updated = room.copy(
+            name = room.name.trim(),
+            colorHex = room.colorHex.trim().ifEmpty { "#3B82F6" },
+            iconName = room.iconName.trim().ifEmpty { "room" },
+            updatedAt = now
+        )
+        roomDao?.upsertRoom(updated)
+        return updated
+    }
+
+    suspend fun deleteRoom(roomId: String) {
+        // Critical safeguard: BoxEntity.roomId has onDelete = ForeignKey.SET_NULL,
+        // which leaves all child boxes intact with roomId = null.
+        roomDao?.deleteRoomById(roomId)
+    }
+
+    // --- Box Operations ---
 
     fun observeAllBoxesWithDetails(): Flow<List<BoxWithItemsAndPhotos>> =
         boxDao.observeAllBoxesWithDetails()
 
     fun observeBoxSummaries(): Flow<List<BoxSummary>> =
         boxDao.observeBoxSummaries()
+
+    fun observeBoxesByRoom(roomId: String): Flow<List<BoxWithItemsAndPhotos>> =
+        boxDao.observeBoxesByRoom(roomId)
+
+    fun observeUnassignedBoxes(): Flow<List<BoxWithItemsAndPhotos>> =
+        boxDao.observeUnassignedBoxes()
+
+    fun observeBoxSummariesByRoom(roomId: String): Flow<List<BoxSummary>> =
+        boxDao.observeBoxSummariesByRoom(roomId)
+
+    fun observeUnassignedBoxSummaries(): Flow<List<BoxSummary>> =
+        boxDao.observeUnassignedBoxSummaries()
 
     fun observeBoxWithItemsAndPhotos(boxId: String): Flow<BoxWithItemsAndPhotos?> =
         boxDao.observeBoxWithItemsAndPhotos(boxId)
@@ -118,7 +196,8 @@ class BoxVaultRepository(
         location: String,
         category: String = "General",
         colorHex: String = "#F59E0B",
-        notes: String = ""
+        notes: String = "",
+        roomId: String? = null
     ): BoxEntity {
         val resolvedShortCode = shortCode?.trim()?.takeIf { it.isNotEmpty() }
             ?: generateNextShortCode()
@@ -129,7 +208,8 @@ class BoxVaultRepository(
                 location = location,
                 category = category,
                 colorHex = colorHex,
-                notes = notes
+                notes = notes,
+                roomId = roomId
             )
         )
     }
@@ -141,6 +221,7 @@ class BoxVaultRepository(
             name = box.name.trim(),
             location = box.location.trim(),
             category = box.category.trim().ifEmpty { "General" },
+            roomId = box.roomId?.trim()?.takeIf { it.isNotEmpty() },
             updatedAt = now
         )
         boxDao.upsertBox(updated)
@@ -260,6 +341,7 @@ class BoxVaultRepository(
         photoDao.getAllPhotos()
 
     suspend fun replaceAllInventoryData(
+        rooms: List<RoomEntity> = emptyList(),
         boxes: List<BoxEntity>,
         items: List<ItemEntity>,
         photos: List<PhotoEntity>
@@ -268,7 +350,11 @@ class BoxVaultRepository(
             photoDao.deleteAllPhotos()
             itemDao.deleteAllItems()
             boxDao.deleteAllBoxes()
+            roomDao?.deleteAllRooms()
 
+            if (rooms.isNotEmpty()) {
+                roomDao?.upsertRooms(rooms)
+            }
             if (boxes.isNotEmpty()) {
                 boxDao.upsertBoxes(boxes)
             }
@@ -288,4 +374,15 @@ class BoxVaultRepository(
             executeRestore()
         }
     }
+
+    suspend fun replaceAllInventoryData(
+        boxes: List<BoxEntity>,
+        items: List<ItemEntity>,
+        photos: List<PhotoEntity>
+    ) = replaceAllInventoryData(
+        rooms = emptyList(),
+        boxes = boxes,
+        items = items,
+        photos = photos
+    )
 }

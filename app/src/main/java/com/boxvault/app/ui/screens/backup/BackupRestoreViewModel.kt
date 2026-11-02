@@ -73,11 +73,12 @@ class BackupRestoreViewModel(
                     backupManager.exportBackupToZip(stream)
                 }
             }.onSuccess { summary ->
+                val roomPart = if (summary.roomCount > 0) "${summary.roomCount} rooms, " else ""
                 _uiState.update {
                     it.copy(
                         isWorking = false,
                         lastExportSummary = summary,
-                        statusMessage = "Exported ${summary.boxCount} boxes, ${summary.itemCount} items, and ${summary.photoCount} SHA-256 verified photos.",
+                        statusMessage = "Exported $roomPart${summary.boxCount} boxes, ${summary.itemCount} items, and ${summary.photoCount} SHA-256 verified photos.",
                         errorMessage = null
                     )
                 }
@@ -112,11 +113,12 @@ class BackupRestoreViewModel(
                     backupManager.restoreBackupFromZip(stream)
                 }
             }.onSuccess { summary ->
+                val roomPart = if (summary.roomCount > 0) "${summary.roomCount} rooms, " else ""
                 _uiState.update {
                     it.copy(
                         isWorking = false,
                         lastRestoreSummary = summary,
-                        statusMessage = "Atomically restored ${summary.boxCount} boxes, ${summary.itemCount} items, and ${summary.photoCount} SHA-256 verified photos.",
+                        statusMessage = "Atomically restored $roomPart${summary.boxCount} boxes, ${summary.itemCount} items, and ${summary.photoCount} SHA-256 verified photos.",
                         errorMessage = null
                     )
                 }
