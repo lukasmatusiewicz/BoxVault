@@ -241,7 +241,8 @@ fun DashboardScreen(
                 onValueChange = viewModel::onSearchQueryChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 4.dp, bottom = 10.dp),
                 placeholder = {
                     Text(stringResource(R.string.dashboard_search_placeholder))
                 },
@@ -533,7 +534,7 @@ private fun DashboardHomeContent(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 96.dp),
+        contentPadding = PaddingValues(top = 6.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         val hasAnyBoxes = uiState.allBoxes.isNotEmpty()
@@ -1110,7 +1111,7 @@ private fun GlobalSearchResultsContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
