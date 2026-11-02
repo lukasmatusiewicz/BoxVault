@@ -1,13 +1,16 @@
 package com.boxvault.app.ui.screens.dashboard
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,14 +18,17 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -32,6 +38,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -54,23 +61,25 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -78,11 +87,14 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import com.boxvault.app.util.sensory.SensoryFeedbackManager
 import com.boxvault.app.data.preferences.ThemeMode
 import com.boxvault.app.data.preferences.UserPreferencesManager
+import com.boxvault.app.ui.components.OnboardingDialog
 import com.boxvault.app.ui.components.PrivacyPolicyDialog
 import com.boxvault.app.ui.components.ThemeSelectionDialog
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.boxvault.app.R
@@ -119,111 +131,150 @@ fun DashboardScreen(
     val currentThemeMode by resolvedPrefsManager.themeMode.collectAsStateWithLifecycle()
     val soundEffectsEnabled by resolvedPrefsManager.soundEffectsEnabled.collectAsStateWithLifecycle()
     val hapticsEnabled by resolvedPrefsManager.hapticsEnabled.collectAsStateWithLifecycle()
-    var showThemeDialog by remember { mutableStateOf(false) }
-    var showPrivacyDialog by remember { mutableStateOf(false) }
+    val hasCompletedOnboarding by resolvedPrefsManager.hasCompletedOnboarding.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+
     var showCreateRoomDialog by remember { mutableStateOf(false) }
     var editingRoom by remember { mutableStateOf<RoomEntity?>(null) }
     var deletingRoom by remember { mutableStateOf<RoomEntity?>(null) }
+    var isSpeedDialExpanded by remember { mutableStateOf(false) }
+    var boxToMove by remember { mutableStateOf<BoxSummary?>(null) }
+    var pendingMoveBoxId by remember { mutableStateOf<String?>(null) }
+    val collapsedRoomIds = remember { mutableStateMapOf<String, Boolean>() }
+    var isUnassignedCollapsed by remember { mutableStateOf(false) }
+
+    val fabRotation by animateFloatAsState(
+        targetValue = if (isSpeedDialExpanded) 45f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "fabRotation"
+    )
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.dashboard_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                actions = {
-                    IconButton(onClick = { showPrivacyDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Security,
-                            contentDescription = stringResource(R.string.dashboard_action_privacy)
-                        )
-                    }
-                    IconButton(onClick = { showThemeDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Palette,
-                            contentDescription = stringResource(R.string.dashboard_action_theme)
-                        )
-                    }
-                    IconButton(onClick = onNavigateToQrScanner) {
-                        Icon(
-                            imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = stringResource(R.string.dashboard_action_scan_qr)
-                        )
-                    }
-                    IconButton(onClick = onNavigateToPdfGenerator) {
-                        Icon(
-                            imageVector = Icons.Default.Print,
-                            contentDescription = stringResource(R.string.dashboard_action_print_pdf)
-                        )
-                    }
-                    IconButton(onClick = onNavigateToBackupRestore) {
-                        Icon(
-                            imageVector = Icons.Default.Backup,
-                            contentDescription = stringResource(R.string.dashboard_action_backup_restore)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onNavigateToCreateBox,
-                icon = {
+            Column(
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .padding(end = 16.dp, bottom = 16.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                AnimatedVisibility(
+                    visible = isSpeedDialExpanded,
+                    enter = fadeIn(tween(150)) + expandVertically(tween(200)),
+                    exit = fadeOut(tween(150)) + shrinkVertically(tween(200))
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        ExtendedFloatingActionButton(
+                            onClick = {
+                                isSpeedDialExpanded = false
+                                showCreateRoomDialog = true
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.MeetingRoom,
+                                    contentDescription = null
+                                )
+                            },
+                            text = { Text(stringResource(R.string.dashboard_speed_dial_new_room)) },
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        ExtendedFloatingActionButton(
+                            onClick = {
+                                isSpeedDialExpanded = false
+                                onNavigateToCreateBox()
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.Inventory2,
+                                    contentDescription = null
+                                )
+                            },
+                            text = { Text(stringResource(R.string.dashboard_speed_dial_new_box)) },
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+                FloatingActionButton(
+                    onClick = { isSpeedDialExpanded = !isSpeedDialExpanded },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = null
+                        contentDescription = stringResource(
+                            if (isSpeedDialExpanded) R.string.dashboard_speed_dial_close else R.string.dashboard_speed_dial_open
+                        ),
+                        modifier = Modifier.rotate(fabRotation)
                     )
-                },
-                text = { Text(stringResource(R.string.dashboard_fab_new_box)) },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
+                }
+            }
         }
     ) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(bottom = innerPadding.calculateBottomPadding()),
+            contentPadding = PaddingValues(top = 6.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Instant Global Search Bar
-            OutlinedTextField(
-                value = uiState.searchQuery,
-                onValueChange = viewModel::onSearchQueryChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = {
-                    Text(stringResource(R.string.dashboard_search_placeholder))
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = stringResource(R.string.dashboard_search_content_desc)
+            // 1. Summary Stats & Quick Actions Banner (Visible when not searching)
+            if (!uiState.isSearchActive) {
+                item(key = "summary_stats_banner") {
+                    SummaryStatsBanner(
+                        totalBoxes = uiState.totalBoxes,
+                        totalItemQuantity = uiState.totalItemQuantity,
+                        distinctItemCount = uiState.distinctItemCount,
+                        totalRooms = uiState.totalRooms,
+                        onScanQrClick = onNavigateToQrScanner,
+                        onPrintQrSheetClick = onNavigateToPdfGenerator,
+                        onBackupRestoreClick = onNavigateToBackupRestore
                     )
-                },
-                trailingIcon = {
-                    if (uiState.searchQuery.isNotEmpty()) {
-                        IconButton(onClick = viewModel::onClearSearch) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = stringResource(R.string.dashboard_search_clear)
-                            )
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp)
-            )
+                }
+            }
 
+            // 2. Instant Global Search Bar (Under Summary Stats; scrolls off when scrolling down)
+            item(key = "dashboard_search_bar") {
+                OutlinedTextField(
+                    value = uiState.searchQuery,
+                    onValueChange = viewModel::onSearchQueryChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 4.dp, bottom = 4.dp),
+                    placeholder = {
+                        Text(stringResource(R.string.dashboard_search_placeholder))
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = stringResource(R.string.dashboard_search_content_desc)
+                        )
+                    },
+                    trailingIcon = {
+                        if (uiState.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = viewModel::onClearSearch) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = stringResource(R.string.dashboard_search_clear)
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp)
+                )
+            }
+
+            // 3. Search Results Content (when isSearchActive) OR Normal Dashboard Content (when !isSearchActive)
             if (uiState.isSearchActive) {
-                GlobalSearchResultsContent(
+                globalSearchResultsItems(
                     query = uiState.searchResult.query,
                     matchingBoxes = uiState.searchResult.matchingBoxes,
                     matchingItems = uiState.searchResult.matchingItems,
@@ -231,18 +282,21 @@ fun DashboardScreen(
                     onBulkEntryClick = onNavigateToBulkEntry
                 )
             } else {
-                DashboardHomeContent(
+                dashboardHomeItems(
                     uiState = uiState,
-                    onSelectLocation = viewModel::onSelectLocation,
+                    collapsedRoomIds = collapsedRoomIds,
+                    isUnassignedCollapsed = isUnassignedCollapsed,
+                    onToggleUnassignedCollapse = { isUnassignedCollapsed = !isUnassignedCollapsed },
                     onBoxClick = onNavigateToBoxDetail,
+                    onBoxLongClick = { summary ->
+                        sensoryManager.onActionSuccess(haptic)
+                        boxToMove = summary
+                    },
                     onBulkEntryClick = onNavigateToBulkEntry,
                     onCreateBoxClick = onNavigateToCreateBox,
                     onCreateRoomClick = { showCreateRoomDialog = true },
                     onEditRoom = { editingRoom = it },
-                    onDeleteRoom = { deletingRoom = it },
-                    onScanQrClick = onNavigateToQrScanner,
-                    onPrintQrSheetClick = onNavigateToPdfGenerator,
-                    onBackupRestoreClick = onNavigateToBackupRestore
+                    onDeleteRoom = { deletingRoom = it }
                 )
             }
         }
@@ -252,12 +306,168 @@ fun DashboardScreen(
         QuickCreateRoomDialog(
             title = stringResource(R.string.dashboard_room_create_title),
             confirmButtonText = stringResource(R.string.dashboard_room_create_button),
-            onDismiss = { showCreateRoomDialog = false },
+            onDismiss = {
+                showCreateRoomDialog = false
+                pendingMoveBoxId = null
+            },
             onCreateRoom = { name, colorHex ->
-                viewModel.createRoom(name, colorHex)
+                val targetBoxId = pendingMoveBoxId
+                if (targetBoxId != null) {
+                    viewModel.createRoom(name, colorHex) { newRoomId ->
+                        viewModel.moveBoxToRoom(targetBoxId, newRoomId)
+                    }
+                    pendingMoveBoxId = null
+                } else {
+                    viewModel.createRoom(name, colorHex)
+                }
                 showCreateRoomDialog = false
             }
         )
+    }
+
+    if (boxToMove != null) {
+        val targetBox = boxToMove!!
+        ModalBottomSheet(
+            onDismissRequest = { boxToMove = null }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.dashboard_move_to_room_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = stringResource(R.string.dashboard_move_to_room_subtitle, targetBox.box.name),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Option: Unassigned / None
+                val isUnassigned = targetBox.box.roomId == null
+                Surface(
+                    onClick = {
+                        viewModel.moveBoxToRoom(targetBox.box.id, null)
+                        sensoryManager.onActionSuccess(haptic)
+                        boxToMove = null
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isUnassigned) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MeetingRoom,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.dashboard_move_to_room_unassigned),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (isUnassigned) {
+                            Icon(
+                                imageVector = Icons.Default.CheckBox,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+
+                // All active rooms
+                uiState.rooms.forEach { room ->
+                    val isCurrent = targetBox.box.roomId == room.id
+                    val roomAccent = parseBoxColor(room.colorHex)
+                    Surface(
+                        onClick = {
+                            viewModel.moveBoxToRoom(targetBox.box.id, room.id)
+                            sensoryManager.onActionSuccess(haptic)
+                            boxToMove = null
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isCurrent) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(roomAccent)
+                            )
+                            Text(
+                                text = room.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isCurrent) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckBox,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Inline + New Room Button
+                Button(
+                    onClick = {
+                        val targetId = targetBox.box.id
+                        boxToMove = null
+                        pendingMoveBoxId = targetId
+                        showCreateRoomDialog = true
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.dashboard_move_to_room_new_room))
+                }
+            }
+        }
     }
 
     if (editingRoom != null) {
@@ -307,109 +517,60 @@ fun DashboardScreen(
         )
     }
 
-    if (showThemeDialog) {
-        ThemeSelectionDialog(
-            currentThemeMode = currentThemeMode,
-            soundEffectsEnabled = soundEffectsEnabled,
-            hapticsEnabled = hapticsEnabled,
-            onThemeSelected = { mode ->
-                resolvedPrefsManager.setThemeMode(mode)
-            },
-            onSoundEffectsToggled = { enabled ->
-                resolvedPrefsManager.setSoundEffectsEnabled(enabled)
-            },
-            onHapticsToggled = { enabled ->
-                resolvedPrefsManager.setHapticsEnabled(enabled)
-            },
-            onDismiss = { showThemeDialog = false }
-        )
-    }
-
-    if (showPrivacyDialog) {
-        PrivacyPolicyDialog(
-            onDismiss = { showPrivacyDialog = false }
+    if (!hasCompletedOnboarding) {
+        OnboardingDialog(
+            onDismiss = {
+                coroutineScope.launch {
+                    resolvedPrefsManager.setCompletedOnboarding(true)
+                }
+            }
         )
     }
 }
 
-@Composable
-private fun DashboardHomeContent(
+private fun LazyListScope.dashboardHomeItems(
     uiState: DashboardUiState,
-    onSelectLocation: (String?) -> Unit,
+    collapsedRoomIds: SnapshotStateMap<String, Boolean>,
+    isUnassignedCollapsed: Boolean,
+    onToggleUnassignedCollapse: () -> Unit,
     onBoxClick: (String) -> Unit,
+    onBoxLongClick: (BoxSummary) -> Unit,
     onBulkEntryClick: (String) -> Unit,
     onCreateBoxClick: () -> Unit,
     onCreateRoomClick: () -> Unit,
     onEditRoom: (RoomEntity) -> Unit,
-    onDeleteRoom: (RoomEntity) -> Unit,
-    onScanQrClick: () -> Unit,
-    onPrintQrSheetClick: () -> Unit,
-    onBackupRestoreClick: () -> Unit
+    onDeleteRoom: (RoomEntity) -> Unit
 ) {
-    val collapsedRoomIds = remember { mutableStateMapOf<String, Boolean>() }
-    var isUnassignedCollapsed by remember { mutableStateOf(false) }
+    val hasAnyBoxes = uiState.allBoxes.isNotEmpty()
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Summary Stats & Quick Actions Banner
-        item {
-            SummaryStatsBanner(
-                totalBoxes = uiState.totalBoxes,
-                totalItemQuantity = uiState.totalItemQuantity,
-                distinctItemCount = uiState.distinctItemCount,
-                totalRooms = uiState.totalRooms,
-                onScanQrClick = onScanQrClick,
-                onPrintQrSheetClick = onPrintQrSheetClick,
-                onBackupRestoreClick = onBackupRestoreClick,
+    if (!hasAnyBoxes) {
+        item(key = "empty_dashboard_state") {
+            EmptyDashboardState(
+                hasAnyRooms = uiState.hasRooms,
+                onCreateBoxClick = onCreateBoxClick,
                 onCreateRoomClick = onCreateRoomClick
             )
         }
-
-        // Location Filter Chips
-        if (uiState.locations.isNotEmpty()) {
-            item {
-                LocationFilterRow(
-                    locations = uiState.locations,
-                    selectedLocation = uiState.selectedLocation,
-                    onSelectLocation = onSelectLocation
-                )
-            }
+    } else if (!uiState.hasRooms) {
+        // --- AUTOMATIC FLAT-LIST FALLBACK (0 rooms created) ---
+        items(
+            items = uiState.allBoxes,
+            key = { it.box.id }
+        ) { summary ->
+            BoxSummaryCard(
+                summary = summary,
+                onClick = { onBoxClick(summary.box.id) },
+                onLongClick = { onBoxLongClick(summary) },
+                onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
         }
-
-        val hasAnyVisibleBoxes = uiState.filteredBoxes.isNotEmpty()
-
-        if (!hasAnyVisibleBoxes && (!uiState.hasRooms || uiState.roomSections.all { it.boxes.isEmpty() })) {
-            item {
-                EmptyDashboardState(
-                    hasAnyBoxes = uiState.totalBoxes > 0,
-                    hasAnyRooms = uiState.hasRooms,
-                    selectedLocation = uiState.selectedLocation,
-                    onCreateBoxClick = onCreateBoxClick,
-                    onCreateRoomClick = onCreateRoomClick,
-                    onClearLocationFilter = { onSelectLocation(null) }
-                )
-            }
-        } else if (!uiState.hasRooms) {
-            // --- AUTOMATIC FLAT-LIST FALLBACK (0 rooms created) ---
-            items(
-                items = uiState.filteredBoxes,
-                key = { it.box.id }
-            ) { summary ->
-                BoxSummaryCard(
-                    summary = summary,
-                    onClick = { onBoxClick(summary.box.id) },
-                    onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-        } else {
-            // --- ROOM-GROUPED HIERARCHY (1+ rooms exist) ---
-            uiState.roomSections.forEach { section ->
-                val isExpanded = !(collapsedRoomIds[section.room.id] ?: false)
-                item(key = "room_header_${section.room.id}") {
+    } else {
+        // --- ROOM-GROUPED HIERARCHY (1+ rooms exist) ---
+        uiState.roomSections.forEach { section ->
+            val isExpanded = !(collapsedRoomIds[section.room.id] ?: false)
+            item(key = "room_section_${section.room.id}") {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     RoomHeaderCard(
                         room = section.room,
                         boxCount = section.boxCount,
@@ -421,16 +582,16 @@ private fun DashboardHomeContent(
                         onEditRoom = { onEditRoom(section.room) },
                         onDeleteRoom = { onDeleteRoom(section.room) }
                     )
-                }
 
-                item(key = "room_content_${section.room.id}") {
                     AnimatedVisibility(
                         visible = isExpanded,
                         enter = fadeIn(tween(200)) + expandVertically(),
                         exit = fadeOut(tween(150)) + shrinkVertically()
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 6.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             if (section.boxes.isEmpty()) {
@@ -439,7 +600,7 @@ private fun DashboardHomeContent(
                                     shape = RoundedCornerShape(10.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 24.dp, vertical = 2.dp)
+                                        .padding(horizontal = 24.dp)
                                 ) {
                                     Text(
                                         text = stringResource(R.string.dashboard_room_empty),
@@ -453,6 +614,7 @@ private fun DashboardHomeContent(
                                     BoxSummaryCard(
                                         summary = summary,
                                         onClick = { onBoxClick(summary.box.id) },
+                                        onLongClick = { onBoxLongClick(summary) },
                                         onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
                                         modifier = Modifier.padding(start = 24.dp, end = 16.dp)
                                     )
@@ -462,31 +624,34 @@ private fun DashboardHomeContent(
                     }
                 }
             }
+        }
 
-            if (uiState.unassignedBoxes.isNotEmpty()) {
-                item(key = "unassigned_header") {
+        if (uiState.unassignedBoxes.isNotEmpty()) {
+            item(key = "unassigned_section") {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     UnassignedHeaderCard(
                         boxCount = uiState.unassignedBoxes.size,
                         totalItems = uiState.unassignedBoxes.sumOf { it.itemCount },
                         isExpanded = !isUnassignedCollapsed,
-                        onToggleExpand = { isUnassignedCollapsed = !isUnassignedCollapsed }
+                        onToggleExpand = onToggleUnassignedCollapse
                     )
-                }
 
-                item(key = "unassigned_content") {
                     AnimatedVisibility(
                         visible = !isUnassignedCollapsed,
                         enter = fadeIn(tween(200)) + expandVertically(),
                         exit = fadeOut(tween(150)) + shrinkVertically()
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 6.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             uiState.unassignedBoxes.forEach { summary ->
                                 BoxSummaryCard(
                                     summary = summary,
                                     onClick = { onBoxClick(summary.box.id) },
+                                    onLongClick = { onBoxLongClick(summary) },
                                     onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
                                     modifier = Modifier.padding(start = 24.dp, end = 16.dp)
                                 )
@@ -507,13 +672,13 @@ private fun SummaryStatsBanner(
     totalRooms: Int,
     onScanQrClick: () -> Unit,
     onPrintQrSheetClick: () -> Unit,
-    onBackupRestoreClick: () -> Unit,
-    onCreateRoomClick: () -> Unit
+    onBackupRestoreClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp)
+            .padding(top = 4.dp, bottom = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
@@ -549,62 +714,71 @@ private fun SummaryStatsBanner(
                 )
             }
 
-            LazyRow(
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                item {
-                    AssistChip(
-                        onClick = onCreateRoomClick,
-                        label = { Text(stringResource(R.string.dashboard_quick_add_room)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    )
-                }
-                item {
-                    AssistChip(
-                        onClick = onScanQrClick,
-                        label = { Text(stringResource(R.string.dashboard_quick_scan_qr)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.QrCodeScanner,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    )
-                }
-                item {
-                    AssistChip(
-                        onClick = onPrintQrSheetClick,
-                        label = { Text(stringResource(R.string.dashboard_quick_print_sheet)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Print,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    )
-                }
-                item {
-                    AssistChip(
-                        onClick = onBackupRestoreClick,
-                        label = { Text(stringResource(R.string.dashboard_quick_backup_zip)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Backup,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    )
-                }
+                UtilityHubCard(
+                    icon = Icons.Default.QrCodeScanner,
+                    label = stringResource(R.string.dashboard_hub_scan_qr),
+                    onClick = onScanQrClick,
+                    modifier = Modifier.weight(1f)
+                )
+                UtilityHubCard(
+                    icon = Icons.Default.Print,
+                    label = stringResource(R.string.dashboard_hub_print_sheet),
+                    onClick = onPrintQrSheetClick,
+                    modifier = Modifier.weight(1f)
+                )
+                UtilityHubCard(
+                    icon = Icons.Default.Backup,
+                    label = stringResource(R.string.dashboard_hub_backup_zip),
+                    onClick = onBackupRestoreClick,
+                    modifier = Modifier.weight(1f)
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun UtilityHubCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -623,7 +797,7 @@ private fun RoomHeaderCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -704,7 +878,7 @@ private fun UnassignedHeaderCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
@@ -776,44 +950,12 @@ private fun StatColumn(
     }
 }
 
-@Composable
-private fun LocationFilterRow(
-    locations: List<String>,
-    selectedLocation: String?,
-    onSelectLocation: (String?) -> Unit
-) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        item {
-            FilterChip(
-                selected = selectedLocation == null,
-                onClick = { onSelectLocation(null) },
-                label = { Text(stringResource(R.string.dashboard_filter_all_locations)) }
-            )
-        }
-        items(locations) { location ->
-            FilterChip(
-                selected = selectedLocation.equals(location, ignoreCase = true),
-                onClick = { onSelectLocation(location) },
-                label = { Text(location) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            )
-        }
-    }
-}
-
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BoxSummaryCard(
     summary: BoxSummary,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     onQuickBulkEntryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -822,7 +964,11 @@ private fun BoxSummaryCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clip(RoundedCornerShape(14.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -962,99 +1108,99 @@ private fun BoxSummaryCard(
     }
 }
 
-@Composable
-private fun GlobalSearchResultsContent(
+private fun LazyListScope.globalSearchResultsItems(
     query: String,
     matchingBoxes: List<BoxWithItemsAndPhotos>,
     matchingItems: List<ItemWithBox>,
     onBoxClick: (String) -> Unit,
     onBulkEntryClick: (String) -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            Text(
-                text = stringResource(R.string.dashboard_search_results_title, query),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
+    item(key = "search_results_title") {
+        Text(
+            text = stringResource(R.string.dashboard_search_results_title, query),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+    }
 
-        if (matchingBoxes.isEmpty() && matchingItems.isEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
+    if (matchingBoxes.isEmpty() && matchingItems.isEmpty()) {
+        item(key = "search_no_results") {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = stringResource(R.string.dashboard_search_no_results),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = stringResource(R.string.dashboard_search_no_results_hint),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.dashboard_search_no_results),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.dashboard_search_no_results_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
+    }
 
-        if (matchingItems.isNotEmpty()) {
-            item {
-                Text(
-                    text = stringResource(R.string.dashboard_search_matching_items, matchingItems.size),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
-            items(
-                items = matchingItems,
-                key = { "item_${it.item.id}" }
-            ) { itemWithBox ->
-                SearchMatchingItemCard(
-                    itemWithBox = itemWithBox,
-                    onClick = { onBoxClick(itemWithBox.box.id) }
-                )
-            }
+    if (matchingItems.isNotEmpty()) {
+        item(key = "search_matching_items_header") {
+            Text(
+                text = stringResource(R.string.dashboard_search_matching_items, matchingItems.size),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
         }
+        items(
+            items = matchingItems,
+            key = { "item_${it.item.id}" }
+        ) { itemWithBox ->
+            SearchMatchingItemCard(
+                itemWithBox = itemWithBox,
+                onClick = { onBoxClick(itemWithBox.box.id) },
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+    }
 
-        if (matchingBoxes.isNotEmpty()) {
-            item {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.dashboard_search_matching_boxes, matchingBoxes.size),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            items(
-                items = matchingBoxes,
-                key = { "box_${it.box.id}" }
-            ) { boxWithDetails ->
-                BoxSummaryCard(
-                    summary = BoxSummary(
-                        box = boxWithDetails.box,
-                        itemCount = boxWithDetails.distinctItemCount,
-                        totalQuantity = boxWithDetails.totalItemQuantity,
-                        photoCount = boxWithDetails.photos.size
-                    ),
-                    onClick = { onBoxClick(boxWithDetails.box.id) },
-                    onQuickBulkEntryClick = { onBulkEntryClick(boxWithDetails.box.id) }
-                )
-            }
+    if (matchingBoxes.isNotEmpty()) {
+        item(key = "search_matching_boxes_header") {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.dashboard_search_matching_boxes, matchingBoxes.size),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+        items(
+            items = matchingBoxes,
+            key = { "box_${it.box.id}" }
+        ) { boxWithDetails ->
+            BoxSummaryCard(
+                summary = BoxSummary(
+                    box = boxWithDetails.box,
+                    itemCount = boxWithDetails.distinctItemCount,
+                    totalQuantity = boxWithDetails.totalItemQuantity,
+                    photoCount = boxWithDetails.photos.size
+                ),
+                onClick = { onBoxClick(boxWithDetails.box.id) },
+                onQuickBulkEntryClick = { onBulkEntryClick(boxWithDetails.box.id) },
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
         }
     }
 }
@@ -1062,12 +1208,13 @@ private fun GlobalSearchResultsContent(
 @Composable
 private fun SearchMatchingItemCard(
     itemWithBox: ItemWithBox,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val boxColor = parseBoxColor(itemWithBox.box.colorHex)
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
@@ -1172,12 +1319,9 @@ private fun SearchMatchingItemCard(
 
 @Composable
 private fun EmptyDashboardState(
-    hasAnyBoxes: Boolean,
     hasAnyRooms: Boolean,
-    selectedLocation: String?,
     onCreateBoxClick: () -> Unit,
-    onCreateRoomClick: () -> Unit,
-    onClearLocationFilter: () -> Unit
+    onCreateRoomClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -1201,44 +1345,33 @@ private fun EmptyDashboardState(
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
-            if (!hasAnyBoxes) {
-                Text(
-                    text = stringResource(R.string.dashboard_empty_title),
-                    style = MaterialTheme.typography.titleLarge
+            Text(
+                text = stringResource(R.string.dashboard_empty_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = stringResource(R.string.dashboard_empty_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AssistChip(
+                    onClick = onCreateBoxClick,
+                    label = { Text(stringResource(R.string.dashboard_empty_create_box)) },
+                    leadingIcon = {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                    }
                 )
-                Text(
-                    text = stringResource(R.string.dashboard_empty_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!hasAnyRooms) {
                     AssistChip(
-                        onClick = onCreateBoxClick,
-                        label = { Text(stringResource(R.string.dashboard_empty_create_box)) },
+                        onClick = onCreateRoomClick,
+                        label = { Text(stringResource(R.string.dashboard_empty_create_room)) },
                         leadingIcon = {
-                            Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                            Icon(imageVector = Icons.Default.MeetingRoom, contentDescription = null)
                         }
                     )
-                    if (!hasAnyRooms) {
-                        AssistChip(
-                            onClick = onCreateRoomClick,
-                            label = { Text(stringResource(R.string.dashboard_empty_create_room)) },
-                            leadingIcon = {
-                                Icon(imageVector = Icons.Default.MeetingRoom, contentDescription = null)
-                            }
-                        )
-                    }
                 }
-            } else {
-                Text(
-                    text = stringResource(R.string.dashboard_empty_no_boxes_in_location, selectedLocation ?: ""),
-                    style = MaterialTheme.typography.titleLarge
-                )
-                AssistChip(
-                    onClick = onClearLocationFilter,
-                    label = { Text(stringResource(R.string.dashboard_empty_show_all_locations)) }
-                )
             }
         }
     }

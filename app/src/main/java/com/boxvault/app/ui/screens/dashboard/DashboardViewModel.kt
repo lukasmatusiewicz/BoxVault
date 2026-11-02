@@ -36,7 +36,6 @@ data class DashboardUiState(
     val roomSections: List<RoomSectionUiModel> = emptyList(),
     val unassignedBoxes: List<BoxSummary> = emptyList(),
     val locations: List<String> = emptyList(),
-    val selectedLocation: String? = null,
     val allBoxes: List<BoxSummary> = emptyList(),
     val filteredBoxes: List<BoxSummary> = emptyList(),
     val searchQuery: String = "",
@@ -59,9 +58,6 @@ class DashboardViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _selectedLocation = MutableStateFlow<String?>(null)
-    val selectedLocation: StateFlow<String?> = _selectedLocation.asStateFlow()
-
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
@@ -82,27 +78,18 @@ class DashboardViewModel(
 
         val contentFlow = combine(
             repository.observeAllRooms(),
-            repository.observeBoxSummaries(),
-            _selectedLocation
-        ) { rooms, boxSummaries, selectedLoc ->
+            repository.observeBoxSummaries()
+        ) { rooms, boxSummaries ->
             DashboardContent(
                 rooms = rooms,
-                boxes = boxSummaries,
-                selectedLocation = selectedLoc
+                boxes = boxSummaries
             )
         }
 
         viewModelScope.launch {
             combine(statsFlow, contentFlow) { stats, content ->
-                val activeLoc = content.selectedLocation?.takeIf { it in stats.locations }
-                val filtered = if (activeLoc == null) {
-                    content.boxes
-                } else {
-                    content.boxes.filter { it.box.location.equals(activeLoc, ignoreCase = true) }
-                }
-
                 val sections = content.rooms.map { room ->
-                    val roomBoxes = filtered.filter { it.box.roomId == room.id }
+                    val roomBoxes = content.boxes.filter { it.box.roomId == room.id }
                     RoomSectionUiModel(
                         room = room,
                         boxes = roomBoxes,
@@ -110,7 +97,7 @@ class DashboardViewModel(
                         totalQuantity = roomBoxes.sumOf { it.totalQuantity }
                     )
                 }
-                val unassigned = filtered.filter { it.box.roomId == null }
+                val unassigned = content.boxes.filter { it.box.roomId == null }
 
                 _uiState.update { current ->
                     current.copy(
@@ -121,9 +108,8 @@ class DashboardViewModel(
                         totalRooms = content.rooms.size,
                         rooms = content.rooms,
                         locations = stats.locations,
-                        selectedLocation = activeLoc,
                         allBoxes = content.boxes,
-                        filteredBoxes = filtered,
+                        filteredBoxes = content.boxes,
                         roomSections = sections,
                         unassignedBoxes = unassigned
                     )
@@ -162,14 +148,15 @@ class DashboardViewModel(
         onSearchQueryChange("")
     }
 
-    fun onSelectLocation(location: String?) {
-        val nextLocation = if (_selectedLocation.value == location) null else location
-        _selectedLocation.value = nextLocation
-    }
-
-    fun createRoom(name: String, colorHex: String = "#3B82F6", iconName: String = "room") {
+    fun createRoom(
+        name: String,
+        colorHex: String = "#3B82F6",
+        iconName: String = "room",
+        onCreated: ((String) -> Unit)? = null
+    ) {
         viewModelScope.launch {
-            repository.createRoom(name = name, colorHex = colorHex, iconName = iconName)
+            val created = repository.createRoom(name = name, colorHex = colorHex, iconName = iconName)
+            onCreated?.invoke(created.id)
         }
     }
 
@@ -192,6 +179,12 @@ class DashboardViewModel(
         }
     }
 
+    fun moveBoxToRoom(boxId: String, newRoomId: String?) {
+        viewModelScope.launch {
+            repository.assignBoxToRoom(boxId, newRoomId)
+        }
+    }
+
     fun deleteBox(boxId: String) {
         viewModelScope.launch {
             repository.deleteBox(boxId)
@@ -207,8 +200,7 @@ class DashboardViewModel(
 
     private data class DashboardContent(
         val rooms: List<RoomEntity>,
-        val boxes: List<BoxSummary>,
-        val selectedLocation: String?
+        val boxes: List<BoxSummary>
     )
 
     class Factory(

@@ -90,6 +90,17 @@
     <string name="dashboard_quick_scan_qr">Scanner QR</string>
     <string name="dashboard_quick_print_sheet">Imprimer QR</string>
     <string name="dashboard_quick_backup_zip">Sauvegarde ZIP</string>
+    <string name="dashboard_hub_scan_qr">Scanner code QR</string>
+    <string name="dashboard_hub_print_sheet">Imprimer feuille QR</string>
+    <string name="dashboard_hub_backup_zip">Sauvegarde .ZIP</string>
+    <string name="dashboard_speed_dial_open">Ouvrir actions rapides</string>
+    <string name="dashboard_speed_dial_close">Fermer actions rapides</string>
+    <string name="dashboard_speed_dial_new_box">Nouvelle boîte</string>
+    <string name="dashboard_speed_dial_new_room">Nouvelle pièce</string>
+    <string name="dashboard_move_to_room_title">Déplacer la boîte vers une pièce</string>
+    <string name="dashboard_move_to_room_subtitle">Sélectionnez une destination pour \"%s\"</string>
+    <string name="dashboard_move_to_room_unassigned">Non assigné / Sans pièce</string>
+    <string name="dashboard_move_to_room_new_room">+ Créer une nouvelle pièce</string>
     <string name="dashboard_room_counts">%1$d boîtes • %2$d articles</string>
     <string name="dashboard_room_collapse">Réduire la pièce</string>
     <string name="dashboard_room_expand">Développer la pièce</string>
@@ -216,7 +227,7 @@
     <string name="bulk_entry_undo_btn">Annuler</string>
 
     <!-- PDF Generator Screen -->
-    <string name="pdf_title">Planches d\'étiquettes QR imprimables</string>
+    <string name="pdf_title">Imprimer étiquettes QR</string>
     <string name="pdf_subtitle">%1$d étiquettes • %2$d page(s) (%3$s)</string>
     <string name="pdf_save_btn">Enregistrer le PDF</string>
     <string name="pdf_section_mode">1. Mode de génération des étiquettes</string>
@@ -238,7 +249,9 @@
     <string name="pdf_no_boxes">Aucune boîte dans la base de données pour l\'instant.</string>
     <string name="pdf_switch_to_blank">Passer aux étiquettes vierges</string>
     <string name="pdf_no_location">Aucun emplacement défini</string>
-    <string name="pdf_export_btn">Exporter le PDF imprimable (%d étiquettes)</string>
+    <string name="pdf_export_btn">Exporter le PDF (%d étiquettes)</string>
+    <string name="pdf_direct_print_btn">Impression directe</string>
+    <string name="pdf_print_job_title">Étiquettes QR BoxVault</string>
     <string name="pdf_preset_large_title">2 × 4 Grandes étiquettes pour cartons</string>
     <string name="pdf_preset_large_desc">8 étiquettes/page — bacs de rangement lourds et cartons de déménagement</string>
     <string name="pdf_preset_medium_title">3 × 7 Étiquettes moyennes pour boîtes</string>
@@ -283,4 +296,23 @@
     <string name="scanner_manual_title">Recherche manuelle par code court / QR</string>
     <string name="scanner_manual_placeholder">ex. BOX-001 ou boxvault://box/...</string>
     <string name="scanner_manual_open_btn">Ouvrir</string>
+
+    <!-- Photo Source Camera Permission Dialog -->
+    <string name="photo_camera_perm_dialog_title">Autorisation de caméra requise</string>
+    <string name="photo_camera_perm_dialog_desc">BoxVault a besoin de l\'accès à l\'appareil photo pour photographier vos boîtes et objets. Vous pouvez accorder l\'accès ou choisir une photo dans la galerie.</string>
+    <string name="photo_camera_perm_retry">Accorder l\'autorisation</string>
+    <string name="photo_camera_perm_gallery">Choisir dans la galerie</string>
+    <string name="photo_camera_perm_open_settings">Ouvrir les paramètres</string>
+    <string name="photo_camera_perm_settings_desc">L\'autorisation de l\'appareil photo a été désactivée. Veuillez activer l\'appareil photo dans les paramètres Android pour prendre des photos.</string>
+
+    <!-- Onboarding Dialog -->
+    <string name="onboarding_title">Bienvenue sur BoxVault</string>
+    <string name="onboarding_subtitle">Votre coffre de stockage 100% hors ligne et gestionnaire d\'inventaire physique.</string>
+    <string name="onboarding_feature_rooms_title">Regroupement par pièces et emplacements</string>
+    <string name="onboarding_feature_rooms_desc">Organisez les boîtes dans des pièces personnalisées comme Garage, Grenier ou Salon avec des badges colorés.</string>
+    <string name="onboarding_feature_qr_title">Planches d\'étiquettes avec code QR</string>
+    <string name="onboarding_feature_qr_desc">Générez et imprimez des planches d\'étiquettes QR à haut contraste directement sur votre imprimante ou en PDF.</string>
+    <string name="onboarding_feature_privacy_title">100% hors ligne et privé</string>
+    <string name="onboarding_feature_privacy_desc">Zéro suivi dans le cloud, aucune autorisation réseau. Votre inventaire reste exclusivement sur votre appareil.</string>
+    <string name="onboarding_get_started">Commencer</string>
 </resources>

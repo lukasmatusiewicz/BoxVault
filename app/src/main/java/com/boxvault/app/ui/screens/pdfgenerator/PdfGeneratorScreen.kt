@@ -1,5 +1,7 @@
 package com.boxvault.app.ui.screens.pdfgenerator
 
+import android.content.Context
+import android.print.PrintManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,6 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
+import androidx.compose.material.icons.filled.ConfirmationNumber
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Refresh
@@ -33,6 +38,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,12 +54,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.R
+import com.boxvault.app.util.pdf.BoxVaultPrintDocumentAdapter
 import com.boxvault.app.util.pdf.PdfPageSize
 import com.boxvault.app.util.pdf.QrGridPreset
 import java.text.SimpleDateFormat
@@ -100,13 +110,18 @@ fun PdfGeneratorScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Column {
                         Text(
                             text = stringResource(R.string.pdf_title),
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = stringResource(
@@ -115,8 +130,10 @@ fun PdfGeneratorScreen(
                                 uiState.estimatedPageCount,
                                 uiState.pageSize.name
                             ),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 },
@@ -129,21 +146,40 @@ fun PdfGeneratorScreen(
                     }
                 },
                 actions = {
-                    Button(
+                    IconButton(
+                        onClick = {
+                            val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
+                            val adapter = BoxVaultPrintDocumentAdapter(
+                                labels = uiState.activeLabelSpecs,
+                                preset = uiState.gridPreset,
+                                pageSize = uiState.pageSize,
+                                drawCutGuides = uiState.drawCutGuides,
+                                jobName = context.getString(R.string.pdf_print_job_title)
+                            )
+                            printManager.print(
+                                context.getString(R.string.pdf_print_job_title),
+                                adapter,
+                                null
+                            )
+                        },
+                        enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Print,
+                            contentDescription = stringResource(R.string.pdf_direct_print_btn)
+                        )
+                    }
+                    IconButton(
                         onClick = {
                             val timestamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
                             createPdfDocumentLauncher.launch("boxvault_qr_labels_$timestamp.pdf")
                         },
-                        enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting,
-                        modifier = Modifier.padding(end = 12.dp)
+                        enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting
                     ) {
                         Icon(
                             imageVector = Icons.Default.PictureAsPdf,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            contentDescription = stringResource(R.string.pdf_save_btn)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.pdf_save_btn))
                     }
                 }
             )
@@ -154,7 +190,7 @@ fun PdfGeneratorScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .imePadding(),
-            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 48.dp),
+            contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (uiState.statusMessage != null) {
@@ -215,18 +251,36 @@ fun PdfGeneratorScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             FilterChip(
                                 selected = uiState.sourceMode == PdfLabelSourceMode.EXISTING_BOXES,
                                 onClick = { viewModel.onSourceModeChange(PdfLabelSourceMode.EXISTING_BOXES) },
-                                label = { Text(stringResource(R.string.pdf_mode_existing_boxes, uiState.allBoxes.size)) }
+                                label = {
+                                    Text(
+                                        text = stringResource(R.string.pdf_mode_existing_boxes, uiState.allBoxes.size),
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                },
+                                modifier = Modifier.weight(1f)
                             )
                             FilterChip(
                                 selected = uiState.sourceMode == PdfLabelSourceMode.PRE_ALLOCATED_BLANK_LABELS,
                                 onClick = { viewModel.onSourceModeChange(PdfLabelSourceMode.PRE_ALLOCATED_BLANK_LABELS) },
-                                label = { Text(stringResource(R.string.pdf_mode_blank_stickers)) }
+                                label = {
+                                    Text(
+                                        text = stringResource(R.string.pdf_mode_blank_stickers),
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                },
+                                modifier = Modifier.weight(1f)
                             )
                         }
                         Text(
@@ -292,21 +346,35 @@ fun PdfGeneratorScreen(
                             }
                         }
 
-                        Row(
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
                                 text = stringResource(R.string.pdf_paper_size_label),
-                                style = MaterialTheme.typography.labelLarge
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
                             )
-                            PdfPageSize.entries.forEach { pageSize ->
-                                FilterChip(
-                                    selected = uiState.pageSize == pageSize,
-                                    onClick = { viewModel.onPageSizeChange(pageSize) },
-                                    label = { Text(stringResource(pageSize.displayNameRes())) }
-                                )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                PdfPageSize.entries.forEach { pageSize ->
+                                    FilterChip(
+                                        selected = uiState.pageSize == pageSize,
+                                        onClick = { viewModel.onPageSizeChange(pageSize) },
+                                        label = {
+                                            Text(
+                                                text = stringResource(pageSize.displayNameRes()),
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
                             }
                         }
 
@@ -343,7 +411,7 @@ fun PdfGeneratorScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     ) {
                         Column(
@@ -352,20 +420,24 @@ fun PdfGeneratorScreen(
                                 .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            Text(
+                                text = stringResource(R.string.pdf_section_blank_qty),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                horizontalArrangement = Arrangement.End
                             ) {
-                                Text(
-                                    text = stringResource(R.string.pdf_section_blank_qty),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
                                 AssistChip(
                                     onClick = viewModel::regenerateBlankLabelUuids,
-                                    label = { Text(stringResource(R.string.pdf_new_uuids_btn)) },
+                                    label = {
+                                        Text(
+                                            text = stringResource(R.string.pdf_new_uuids_btn),
+                                            maxLines = 1
+                                        )
+                                    },
                                     leadingIcon = {
                                         Icon(
                                             imageVector = Icons.Default.Refresh,
@@ -377,15 +449,25 @@ fun PdfGeneratorScreen(
                             }
 
                             val perPage = uiState.gridPreset.labelsPerPage
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(listOf(perPage, perPage * 2, perPage * 3)) { countOption ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(perPage, perPage * 2, perPage * 3).forEach { countOption ->
+                                    val pages = countOption / perPage
                                     FilterChip(
                                         selected = uiState.blankLabelCount == countOption,
                                         onClick = { viewModel.onBlankLabelCountChange(countOption) },
                                         label = {
-                                             val pages = countOption / perPage
-                                            Text(stringResource(R.string.pdf_blank_count_option, countOption, pages))
-                                        }
+                                            Text(
+                                                text = stringResource(R.string.pdf_blank_count_option, countOption, pages),
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
                             }
@@ -407,114 +489,147 @@ fun PdfGeneratorScreen(
                 }
             } else {
                 item {
-                    Row(
+                    Card(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(
-                                R.string.pdf_section_select_boxes,
-                                uiState.selectedBoxIds.size,
-                                uiState.allBoxes.size
-                            ),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
-                        Row {
-                            TextButton(onClick = viewModel::selectAllBoxes) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckBox,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.pdf_select_all))
-                            }
-                            TextButton(onClick = viewModel::clearBoxSelection) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckBoxOutlineBlank,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.pdf_select_none))
-                            }
-                        }
-                    }
-                }
-
-                if (uiState.allBoxes.isEmpty()) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.pdf_no_boxes),
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                OutlinedButton(
-                                    onClick = {
-                                        viewModel.onSourceModeChange(PdfLabelSourceMode.PRE_ALLOCATED_BLANK_LABELS)
-                                    }
-                                ) {
-                                    Text(stringResource(R.string.pdf_switch_to_blank))
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    items(
-                        items = uiState.allBoxes,
-                        key = { it.id }
-                    ) { box ->
-                        val isSelected = box.id in uiState.selectedBoxIds
-                        Card(
+                    ) {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { viewModel.toggleBoxSelection(box.id) },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) {
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                } else {
-                                    MaterialTheme.colorScheme.surface
-                                }
-                            )
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
+                            // Header Row: Title on Left, Controls (Select All / None) on Right
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Checkbox(
-                                    checked = isSelected,
-                                    onCheckedChange = { viewModel.toggleBoxSelection(box.id) }
+                                Text(
+                                    text = stringResource(
+                                        R.string.pdf_section_select_boxes,
+                                        uiState.selectedBoxIds.size,
+                                        uiState.allBoxes.size
+                                    ),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "${box.shortCode} • ${box.name}",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
+
+                                if (uiState.allBoxes.isNotEmpty()) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        TextButton(
+                                            onClick = viewModel::selectAllBoxes,
+                                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.CheckBox,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = stringResource(R.string.pdf_select_all),
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
+                                        TextButton(
+                                            onClick = viewModel::clearBoxSelection,
+                                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.CheckBoxOutlineBlank,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = stringResource(R.string.pdf_select_none),
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Content inside Section 3 Card
+                            if (uiState.allBoxes.isEmpty()) {
+                                // Empty state inside the Card
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Inventory2,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(36.dp)
                                     )
                                     Text(
-                                        text = box.location.ifBlank { stringResource(R.string.pdf_no_location) },
-                                        style = MaterialTheme.typography.bodySmall,
+                                        text = stringResource(R.string.pdf_no_boxes),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        textAlign = TextAlign.Center,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                    OutlinedButton(
+                                        onClick = {
+                                            viewModel.onSourceModeChange(PdfLabelSourceMode.PRE_ALLOCATED_BLANK_LABELS)
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ConfirmationNumber,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = stringResource(R.string.pdf_switch_to_blank),
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            } else {
+                                // List of boxes inside the Card with clean rows and dividers
+                                uiState.allBoxes.forEachIndexed { index, box ->
+                                    if (index > 0) {
+                                        HorizontalDivider(
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                            thickness = 1.dp
+                                        )
+                                    }
+                                    val isSelected = box.id in uiState.selectedBoxIds
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable { viewModel.toggleBoxSelection(box.id) }
+                                            .padding(vertical = 6.dp, horizontal = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Checkbox(
+                                            checked = isSelected,
+                                            onCheckedChange = { viewModel.toggleBoxSelection(box.id) }
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "${box.shortCode} • ${box.name}",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = box.location.ifBlank { stringResource(R.string.pdf_no_location) },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -523,23 +638,64 @@ fun PdfGeneratorScreen(
             }
 
             item {
-                Button(
-                    onClick = {
-                        val timestamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
-                        createPdfDocumentLauncher.launch("boxvault_qr_labels_$timestamp.pdf")
-                    },
-                    enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    shape = RoundedCornerShape(12.dp)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.Print, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.pdf_export_btn, uiState.activeLabelSpecs.size),
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    Button(
+                        onClick = {
+                            val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
+                            val adapter = BoxVaultPrintDocumentAdapter(
+                                labels = uiState.activeLabelSpecs,
+                                preset = uiState.gridPreset,
+                                pageSize = uiState.pageSize,
+                                drawCutGuides = uiState.drawCutGuides,
+                                jobName = context.getString(R.string.pdf_print_job_title)
+                            )
+                            printManager.print(
+                                context.getString(R.string.pdf_print_job_title),
+                                adapter,
+                                null
+                            )
+                        },
+                        enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Print, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.pdf_direct_print_btn),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val timestamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
+                            createPdfDocumentLauncher.launch("boxvault_qr_labels_$timestamp.pdf")
+                        },
+                        enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.PictureAsPdf, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.pdf_export_btn, uiState.activeLabelSpecs.size),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }

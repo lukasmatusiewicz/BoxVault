@@ -158,5 +158,27 @@ class QrSheetPdfGeneratorTest {
         assertTrue(exportSucceeded)
         assertTrue(pdfOut.toByteArray().isNotEmpty())
     }
+
+    @Test
+    fun `BoxVaultPrintDocumentAdapter holds correct label specs and computes page counts`() {
+        val labels = (1..10).map { i ->
+            QrLabelSpec(
+                shortCode = "BOX-$i",
+                name = "Box $i"
+            )
+        }
+        val adapter = BoxVaultPrintDocumentAdapter(
+            labels = labels,
+            preset = QrGridPreset.LARGE_2X4,
+            pageSize = PdfPageSize.A4,
+            jobName = "Test_Job"
+        )
+
+        assertEquals(10, adapter.labels.size)
+        assertEquals(QrGridPreset.LARGE_2X4, adapter.preset)
+        assertEquals(PdfPageSize.A4, adapter.pageSize)
+        assertEquals("Test_Job", adapter.jobName)
+        assertEquals(2, adapter.computeTotalPages())
+    }
 }
 

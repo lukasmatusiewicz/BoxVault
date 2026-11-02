@@ -255,4 +255,21 @@ class BoxVaultRepositoryTest {
         assertFalse(repository.getAllRooms().any { it.id == oldRoom.id })
         assertFalse(repository.getAllBoxes().any { it.id == "box-old-1" })
     }
+
+    @Test
+    fun `assignBoxToRoom assigns and unassigns room correctly`() = runTest {
+        val room = repository.createRoom(name = "Workshop", colorHex = "#EF4444")
+        val box = repository.createBox(name = "Power Tools", location = "Workbench")
+        assertNull(box.roomId)
+
+        repository.assignBoxToRoom(box.id, room.id)
+        val updatedBox = repository.getBoxById(box.id)
+        assertNotNull(updatedBox)
+        assertEquals(room.id, updatedBox?.roomId)
+
+        repository.assignBoxToRoom(box.id, null)
+        val unassignedBox = repository.getBoxById(box.id)
+        assertNotNull(unassignedBox)
+        assertNull(unassignedBox?.roomId)
+    }
 }

@@ -1,7 +1,10 @@
 package com.boxvault.app.ui.screens.scanner
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import android.util.Size
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,6 +23,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -72,9 +76,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.boxvault.app.ui.components.findActivity
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -99,6 +107,9 @@ fun QrScannerScreen(
         sensoryFeedbackManager ?: SensoryFeedbackManager(context, UserPreferencesManager(context))
     }
 
+    val activity = remember(context) { context.findActivity() }
+    var hasRequestedOnce by remember { mutableStateOf(false) }
+
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -107,16 +118,46 @@ fun QrScannerScreen(
             ) == PackageManager.PERMISSION_GRANTED
         )
     }
+    var isRequestingPermission by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
+        isRequestingPermission = false
+        hasRequestedOnce = true
         hasCameraPermission = granted
     }
 
-    LaunchedEffect(Unit) {
-        if (!hasCameraPermission) {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
+    val isPermanentlyDenied = remember(hasCameraPermission, hasRequestedOnce) {
+        val notGranted = !hasCameraPermission
+        val cannotShowRationale = activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(
+            activity,
+            Manifest.permission.CAMERA
+        )
+        notGranted && (cannotShowRationale && hasRequestedOnce)
+    }
+
+    val openAppSettings: () -> Unit = {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasCameraPermission = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.CAMERA
+                ) == PackageManager.PERMISSION_GRANTED
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -139,8 +180,10 @@ fun QrScannerScreen(
     var activeCamera by remember { mutableStateOf<Camera?>(null) }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Column {
                         Text(
@@ -194,7 +237,7 @@ fun QrScannerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
+                .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Camera Viewport or Permission Prompt
@@ -250,16 +293,35 @@ fun QrScannerScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = stringResource(R.string.scanner_camera_perm_desc),
+                            text = if (isPermanentlyDenied) {
+                                stringResource(R.string.photo_camera_perm_settings_desc)
+                            } else {
+                                stringResource(R.string.scanner_camera_perm_desc)
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.8f)
                         )
-                        Button(
-                            onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }
-                        ) {
-                            Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.scanner_grant_perm_btn))
+                        if (isPermanentlyDenied) {
+                            Button(
+                                onClick = openAppSettings
+                            ) {
+                                Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.photo_camera_perm_open_settings))
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    if (!isRequestingPermission) {
+                                        isRequestingPermission = true
+                                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                                    }
+                                }
+                            ) {
+                                Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.scanner_grant_perm_btn))
+                            }
                         }
                     }
                 }

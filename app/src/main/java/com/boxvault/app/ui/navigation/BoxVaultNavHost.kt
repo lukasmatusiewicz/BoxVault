@@ -9,7 +9,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.boxvault.app.ui.components.PrivacyPolicyDialog
+import com.boxvault.app.ui.components.ThemeSelectionDialog
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -73,8 +78,39 @@ fun BoxVaultNavHost(
     val currentRoute = navBackStackEntry?.destination?.route
     val isDashboard = currentRoute == BoxVaultDestinations.DASHBOARD_ROUTE
 
+    var showPrivacyDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+    val currentThemeMode by resolvedUserPreferencesManager.themeMode.collectAsStateWithLifecycle()
+    val soundEffectsEnabled by resolvedUserPreferencesManager.soundEffectsEnabled.collectAsStateWithLifecycle()
+    val hapticsEnabled by resolvedUserPreferencesManager.hapticsEnabled.collectAsStateWithLifecycle()
+
+    if (showThemeDialog) {
+        ThemeSelectionDialog(
+            currentThemeMode = currentThemeMode,
+            soundEffectsEnabled = soundEffectsEnabled,
+            hapticsEnabled = hapticsEnabled,
+            onThemeSelected = { mode ->
+                resolvedUserPreferencesManager.setThemeMode(mode)
+            },
+            onSoundEffectsToggled = { enabled ->
+                resolvedUserPreferencesManager.setSoundEffectsEnabled(enabled)
+            },
+            onHapticsToggled = { enabled ->
+                resolvedUserPreferencesManager.setHapticsEnabled(enabled)
+            },
+            onDismiss = { showThemeDialog = false }
+        )
+    }
+
+    if (showPrivacyDialog) {
+        PrivacyPolicyDialog(
+            onDismiss = { showPrivacyDialog = false }
+        )
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         BoxVaultHeader(
+            isDashboard = isDashboard,
             onHeaderClick = if (!isDashboard) {
                 {
                     navController.navigate(BoxVaultDestinations.DASHBOARD_ROUTE) {
@@ -83,7 +119,9 @@ fun BoxVaultNavHost(
                         }
                     }
                 }
-            } else null
+            } else null,
+            onPrivacyClick = if (isDashboard) { { showPrivacyDialog = true } } else null,
+            onThemeClick = if (isDashboard) { { showThemeDialog = true } } else null
         )
 
         NavHost(

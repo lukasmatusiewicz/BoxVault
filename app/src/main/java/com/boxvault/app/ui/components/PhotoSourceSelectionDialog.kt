@@ -1,9 +1,21 @@
 package com.boxvault.app.ui.components
 
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -14,18 +26,39 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.boxvault.app.R
+
+fun Context.findActivity(): Activity? {
+    var currentContext = this
+    while (currentContext is ContextWrapper) {
+        if (currentContext is Activity) return currentContext
+        currentContext = currentContext.baseContext
+    }
+    return null
+}
 
 @Composable
 fun PhotoSourceSelectionDialog(
@@ -36,6 +69,144 @@ fun PhotoSourceSelectionDialog(
     onChooseFromGallery: () -> Unit,
     onRemovePhoto: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    var showCameraRationaleDialog by remember { mutableStateOf(false) }
+    var isRequestingPermission by remember { mutableStateOf(false) }
+    var hasRequestedOnce by remember { mutableStateOf(false) }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        isRequestingPermission = false
+        hasRequestedOnce = true
+        if (isGranted) {
+            showCameraRationaleDialog = false
+            onDismiss()
+            onTakePhoto()
+        } else {
+            showCameraRationaleDialog = true
+        }
+    }
+
+    val isPermanentlyDenied = remember(showCameraRationaleDialog, hasRequestedOnce) {
+        val notGranted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) != PackageManager.PERMISSION_GRANTED
+        val cannotShowRationale = activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(
+            activity,
+            Manifest.permission.CAMERA
+        )
+        notGranted && (cannotShowRationale && hasRequestedOnce)
+    }
+
+    val openAppSettings: () -> Unit = {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val isNowGranted = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.CAMERA
+                ) == PackageManager.PERMISSION_GRANTED
+                if (isNowGranted) {
+                    showCameraRationaleDialog = false
+                    onDismiss()
+                    onTakePhoto()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val requestCameraPermissionOrProceed: () -> Unit = {
+        val permissionCheck = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        )
+        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+            onDismiss()
+            onTakePhoto()
+        } else if (!isRequestingPermission) {
+            isRequestingPermission = true
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    if (showCameraRationaleDialog) {
+        AlertDialog(
+            onDismissRequest = { showCameraRationaleDialog = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.photo_camera_perm_dialog_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = if (isPermanentlyDenied) {
+                        stringResource(R.string.photo_camera_perm_settings_desc)
+                    } else {
+                        stringResource(R.string.photo_camera_perm_dialog_desc)
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                if (isPermanentlyDenied) {
+                    Button(
+                        onClick = {
+                            showCameraRationaleDialog = false
+                            openAppSettings()
+                        }
+                    ) {
+                        Text(stringResource(R.string.photo_camera_perm_open_settings))
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            showCameraRationaleDialog = false
+                            if (!isRequestingPermission) {
+                                isRequestingPermission = true
+                                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        }
+                    ) {
+                        Text(stringResource(R.string.photo_camera_perm_retry))
+                    }
+                }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        onClick = {
+                            showCameraRationaleDialog = false
+                            onDismiss()
+                            onChooseFromGallery()
+                        }
+                    ) {
+                        Text(stringResource(R.string.photo_camera_perm_gallery))
+                    }
+                    TextButton(onClick = { showCameraRationaleDialog = false }) {
+                        Text(stringResource(R.string.common_cancel))
+                    }
+                }
+            }
+        )
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -52,12 +223,9 @@ fun PhotoSourceSelectionDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Option 1: Take Photo
+                // Option 1: Take Photo (Guarded by Camera runtime permission)
                 Surface(
-                    onClick = {
-                        onDismiss()
-                        onTakePhoto()
-                    },
+                    onClick = requestCameraPermissionOrProceed,
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier.fillMaxWidth()
@@ -172,3 +340,4 @@ fun PhotoSourceSelectionDialog(
         }
     )
 }
+

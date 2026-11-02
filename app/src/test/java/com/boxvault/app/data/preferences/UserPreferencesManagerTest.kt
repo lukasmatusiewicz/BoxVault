@@ -88,4 +88,22 @@ class UserPreferencesManagerTest {
         assertTrue(preferencesManager.isHapticsEnabled())
         assertTrue(preferencesManager.hapticsEnabled.first())
     }
+
+    @Test
+    fun defaultOnboardingState_isNotCompleted() = runTest {
+        assertFalse(preferencesManager.hasCompletedOnboarding.first())
+    }
+
+    @Test
+    fun setCompletedOnboarding_persistsAndUpdatesFlow() = runTest {
+        preferencesManager.setCompletedOnboarding(true)
+        assertTrue(preferencesManager.hasCompletedOnboarding.first())
+
+        // Reload to verify SharedPreferences persistence
+        val reloadedManager = UserPreferencesManager(context)
+        assertTrue(reloadedManager.hasCompletedOnboarding.first())
+
+        preferencesManager.setCompletedOnboarding(false)
+        assertFalse(preferencesManager.hasCompletedOnboarding.first())
+    }
 }
