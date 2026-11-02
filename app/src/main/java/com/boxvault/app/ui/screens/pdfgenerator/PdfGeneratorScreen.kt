@@ -34,7 +34,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,6 +53,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.boxvault.app.R
@@ -133,7 +134,7 @@ fun PdfGeneratorScreen(
                     }
                 },
                 actions = {
-                    FilledTonalButton(
+                    IconButton(
                         onClick = {
                             val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
                             val adapter = BoxVaultPrintDocumentAdapter(
@@ -149,32 +150,24 @@ fun PdfGeneratorScreen(
                                 null
                             )
                         },
-                        enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting,
-                        modifier = Modifier.padding(end = 4.dp)
+                        enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting
                     ) {
                         Icon(
                             imageVector = Icons.Default.Print,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            contentDescription = stringResource(R.string.pdf_direct_print_btn)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.pdf_direct_print_btn))
                     }
-                    Button(
+                    IconButton(
                         onClick = {
                             val timestamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
                             createPdfDocumentLauncher.launch("boxvault_qr_labels_$timestamp.pdf")
                         },
-                        enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting,
-                        modifier = Modifier.padding(end = 8.dp)
+                        enabled = uiState.activeLabelSpecs.isNotEmpty() && !uiState.isExporting
                     ) {
                         Icon(
                             imageVector = Icons.Default.PictureAsPdf,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            contentDescription = stringResource(R.string.pdf_save_btn)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.pdf_save_btn))
                     }
                 }
             )
@@ -246,18 +239,36 @@ fun PdfGeneratorScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             FilterChip(
                                 selected = uiState.sourceMode == PdfLabelSourceMode.EXISTING_BOXES,
                                 onClick = { viewModel.onSourceModeChange(PdfLabelSourceMode.EXISTING_BOXES) },
-                                label = { Text(stringResource(R.string.pdf_mode_existing_boxes, uiState.allBoxes.size)) }
+                                label = {
+                                    Text(
+                                        text = stringResource(R.string.pdf_mode_existing_boxes, uiState.allBoxes.size),
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                },
+                                modifier = Modifier.weight(1f)
                             )
                             FilterChip(
                                 selected = uiState.sourceMode == PdfLabelSourceMode.PRE_ALLOCATED_BLANK_LABELS,
                                 onClick = { viewModel.onSourceModeChange(PdfLabelSourceMode.PRE_ALLOCATED_BLANK_LABELS) },
-                                label = { Text(stringResource(R.string.pdf_mode_blank_stickers)) }
+                                label = {
+                                    Text(
+                                        text = stringResource(R.string.pdf_mode_blank_stickers),
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                },
+                                modifier = Modifier.weight(1f)
                             )
                         }
                         Text(
@@ -323,21 +334,35 @@ fun PdfGeneratorScreen(
                             }
                         }
 
-                        Row(
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
                                 text = stringResource(R.string.pdf_paper_size_label),
-                                style = MaterialTheme.typography.labelLarge
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
                             )
-                            PdfPageSize.entries.forEach { pageSize ->
-                                FilterChip(
-                                    selected = uiState.pageSize == pageSize,
-                                    onClick = { viewModel.onPageSizeChange(pageSize) },
-                                    label = { Text(stringResource(pageSize.displayNameRes())) }
-                                )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                PdfPageSize.entries.forEach { pageSize ->
+                                    FilterChip(
+                                        selected = uiState.pageSize == pageSize,
+                                        onClick = { viewModel.onPageSizeChange(pageSize) },
+                                        label = {
+                                            Text(
+                                                text = stringResource(pageSize.displayNameRes()),
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
                             }
                         }
 
@@ -383,20 +408,24 @@ fun PdfGeneratorScreen(
                                 .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            Text(
+                                text = stringResource(R.string.pdf_section_blank_qty),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                horizontalArrangement = Arrangement.End
                             ) {
-                                Text(
-                                    text = stringResource(R.string.pdf_section_blank_qty),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
                                 AssistChip(
                                     onClick = viewModel::regenerateBlankLabelUuids,
-                                    label = { Text(stringResource(R.string.pdf_new_uuids_btn)) },
+                                    label = {
+                                        Text(
+                                            text = stringResource(R.string.pdf_new_uuids_btn),
+                                            maxLines = 1
+                                        )
+                                    },
                                     leadingIcon = {
                                         Icon(
                                             imageVector = Icons.Default.Refresh,
@@ -408,15 +437,25 @@ fun PdfGeneratorScreen(
                             }
 
                             val perPage = uiState.gridPreset.labelsPerPage
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(listOf(perPage, perPage * 2, perPage * 3)) { countOption ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(perPage, perPage * 2, perPage * 3).forEach { countOption ->
+                                    val pages = countOption / perPage
                                     FilterChip(
                                         selected = uiState.blankLabelCount == countOption,
                                         onClick = { viewModel.onBlankLabelCountChange(countOption) },
                                         label = {
-                                             val pages = countOption / perPage
-                                            Text(stringResource(R.string.pdf_blank_count_option, countOption, pages))
-                                        }
+                                            Text(
+                                                text = stringResource(R.string.pdf_blank_count_option, countOption, pages),
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
                             }
@@ -438,10 +477,9 @@ fun PdfGeneratorScreen(
                 }
             } else {
                 item {
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
                             text = stringResource(
@@ -453,7 +491,10 @@ fun PdfGeneratorScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Row {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
                             TextButton(onClick = viewModel::selectAllBoxes) {
                                 Icon(
                                     imageVector = Icons.Default.CheckBox,
@@ -500,7 +541,10 @@ fun PdfGeneratorScreen(
                                         viewModel.onSourceModeChange(PdfLabelSourceMode.PRE_ALLOCATED_BLANK_LABELS)
                                     }
                                 ) {
-                                    Text(stringResource(R.string.pdf_switch_to_blank))
+                                    Text(
+                                        text = stringResource(R.string.pdf_switch_to_blank),
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
                             }
                         }
@@ -584,7 +628,10 @@ fun PdfGeneratorScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = stringResource(R.string.pdf_direct_print_btn),
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
@@ -603,7 +650,10 @@ fun PdfGeneratorScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = stringResource(R.string.pdf_export_btn, uiState.activeLabelSpecs.size),
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
