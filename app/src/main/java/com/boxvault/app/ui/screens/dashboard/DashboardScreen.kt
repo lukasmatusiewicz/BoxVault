@@ -565,54 +565,56 @@ private fun DashboardHomeContent(
             // --- ROOM-GROUPED HIERARCHY (1+ rooms exist) ---
             uiState.roomSections.forEach { section ->
                 val isExpanded = !(collapsedRoomIds[section.room.id] ?: false)
-                item(key = "room_header_${section.room.id}") {
-                    RoomHeaderCard(
-                        room = section.room,
-                        boxCount = section.boxCount,
-                        totalItems = section.totalItems,
-                        isExpanded = isExpanded,
-                        onToggleExpand = {
-                            collapsedRoomIds[section.room.id] = isExpanded
-                        },
-                        onEditRoom = { onEditRoom(section.room) },
-                        onDeleteRoom = { onDeleteRoom(section.room) }
-                    )
-                }
+                item(key = "room_section_${section.room.id}") {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        RoomHeaderCard(
+                            room = section.room,
+                            boxCount = section.boxCount,
+                            totalItems = section.totalItems,
+                            isExpanded = isExpanded,
+                            onToggleExpand = {
+                                collapsedRoomIds[section.room.id] = isExpanded
+                            },
+                            onEditRoom = { onEditRoom(section.room) },
+                            onDeleteRoom = { onDeleteRoom(section.room) }
+                        )
 
-                item(key = "room_content_${section.room.id}") {
-                    AnimatedVisibility(
-                        visible = isExpanded,
-                        enter = fadeIn(tween(200)) + expandVertically(),
-                        exit = fadeOut(tween(150)) + shrinkVertically()
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        AnimatedVisibility(
+                            visible = isExpanded,
+                            enter = fadeIn(tween(200)) + expandVertically(),
+                            exit = fadeOut(tween(150)) + shrinkVertically()
                         ) {
-                            if (section.boxes.isEmpty()) {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 24.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.dashboard_room_empty),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(12.dp)
-                                    )
-                                }
-                            } else {
-                                section.boxes.forEach { summary ->
-                                    BoxSummaryCard(
-                                        summary = summary,
-                                        onClick = { onBoxClick(summary.box.id) },
-                                        onLongClick = { onBoxLongClick(summary) },
-                                        onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
-                                        modifier = Modifier.padding(start = 24.dp, end = 16.dp)
-                                    )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 6.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                if (section.boxes.isEmpty()) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 24.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.dashboard_room_empty),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(12.dp)
+                                        )
+                                    }
+                                } else {
+                                    section.boxes.forEach { summary ->
+                                        BoxSummaryCard(
+                                            summary = summary,
+                                            onClick = { onBoxClick(summary.box.id) },
+                                            onLongClick = { onBoxLongClick(summary) },
+                                            onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
+                                            modifier = Modifier.padding(start = 24.dp, end = 16.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -621,33 +623,35 @@ private fun DashboardHomeContent(
             }
 
             if (uiState.unassignedBoxes.isNotEmpty()) {
-                item(key = "unassigned_header") {
-                    UnassignedHeaderCard(
-                        boxCount = uiState.unassignedBoxes.size,
-                        totalItems = uiState.unassignedBoxes.sumOf { it.itemCount },
-                        isExpanded = !isUnassignedCollapsed,
-                        onToggleExpand = { isUnassignedCollapsed = !isUnassignedCollapsed }
-                    )
-                }
+                item(key = "unassigned_section") {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        UnassignedHeaderCard(
+                            boxCount = uiState.unassignedBoxes.size,
+                            totalItems = uiState.unassignedBoxes.sumOf { it.itemCount },
+                            isExpanded = !isUnassignedCollapsed,
+                            onToggleExpand = { isUnassignedCollapsed = !isUnassignedCollapsed }
+                        )
 
-                item(key = "unassigned_content") {
-                    AnimatedVisibility(
-                        visible = !isUnassignedCollapsed,
-                        enter = fadeIn(tween(200)) + expandVertically(),
-                        exit = fadeOut(tween(150)) + shrinkVertically()
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        AnimatedVisibility(
+                            visible = !isUnassignedCollapsed,
+                            enter = fadeIn(tween(200)) + expandVertically(),
+                            exit = fadeOut(tween(150)) + shrinkVertically()
                         ) {
-                            uiState.unassignedBoxes.forEach { summary ->
-                                BoxSummaryCard(
-                                    summary = summary,
-                                    onClick = { onBoxClick(summary.box.id) },
-                                    onLongClick = { onBoxLongClick(summary) },
-                                    onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
-                                    modifier = Modifier.padding(start = 24.dp, end = 16.dp)
-                                )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 6.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                uiState.unassignedBoxes.forEach { summary ->
+                                    BoxSummaryCard(
+                                        summary = summary,
+                                        onClick = { onBoxClick(summary.box.id) },
+                                        onLongClick = { onBoxLongClick(summary) },
+                                        onQuickBulkEntryClick = { onBulkEntryClick(summary.box.id) },
+                                        modifier = Modifier.padding(start = 24.dp, end = 16.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -790,7 +794,7 @@ private fun RoomHeaderCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -871,7 +875,7 @@ private fun UnassignedHeaderCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
