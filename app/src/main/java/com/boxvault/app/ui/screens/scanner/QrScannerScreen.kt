@@ -107,17 +107,13 @@ fun QrScannerScreen(
             ) == PackageManager.PERMISSION_GRANTED
         )
     }
+    var isRequestingPermission by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
+        isRequestingPermission = false
         hasCameraPermission = granted
-    }
-
-    LaunchedEffect(Unit) {
-        if (!hasCameraPermission) {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
-        }
     }
 
     LaunchedEffect(uiState.resolution) {
@@ -255,7 +251,12 @@ fun QrScannerScreen(
                             color = Color.White.copy(alpha = 0.8f)
                         )
                         Button(
-                            onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }
+                            onClick = {
+                                if (!isRequestingPermission) {
+                                    isRequestingPermission = true
+                                    permissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
+                            }
                         ) {
                             Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))

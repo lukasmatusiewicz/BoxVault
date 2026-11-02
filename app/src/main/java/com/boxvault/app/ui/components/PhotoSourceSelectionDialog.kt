@@ -51,11 +51,14 @@ fun PhotoSourceSelectionDialog(
 ) {
     val context = LocalContext.current
     var showCameraRationaleDialog by remember { mutableStateOf(false) }
+    var isRequestingPermission by remember { mutableStateOf(false) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
+        isRequestingPermission = false
         if (isGranted) {
+            showCameraRationaleDialog = false
             onDismiss()
             onTakePhoto()
         } else {
@@ -71,7 +74,8 @@ fun PhotoSourceSelectionDialog(
         if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
             onDismiss()
             onTakePhoto()
-        } else {
+        } else if (!isRequestingPermission) {
+            isRequestingPermission = true
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
@@ -96,7 +100,10 @@ fun PhotoSourceSelectionDialog(
                 Button(
                     onClick = {
                         showCameraRationaleDialog = false
-                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        if (!isRequestingPermission) {
+                            isRequestingPermission = true
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
                     }
                 ) {
                     Text(stringResource(R.string.photo_camera_perm_retry))

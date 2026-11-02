@@ -173,9 +173,12 @@ fun BoxDetailScreen(
         pendingPhotoTargetItemId = null
     }
 
+    var isRequestingCameraPermission by remember { mutableStateOf(false) }
+
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
+        isRequestingCameraPermission = false
         if (isGranted) {
             takePicturePreviewLauncher.launch(null)
         } else {
@@ -191,7 +194,8 @@ fun BoxDetailScreen(
         )
         if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
             takePicturePreviewLauncher.launch(null)
-        } else {
+        } else if (!isRequestingCameraPermission) {
+            isRequestingCameraPermission = true
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
@@ -530,7 +534,8 @@ fun BoxDetailScreen(
             hasExistingPhoto = photoSourceHasExistingPhoto,
             onDismiss = { showPhotoSourceDialog = false },
             onTakePhoto = {
-                launchCameraWithPermissionCheck(photoSourceTargetItemId)
+                pendingPhotoTargetItemId = photoSourceTargetItemId
+                takePicturePreviewLauncher.launch(null)
             },
             onChooseFromGallery = {
                 pendingPhotoTargetItemId = photoSourceTargetItemId
@@ -1029,7 +1034,7 @@ private fun BoxItemRowCard(
                     photoRelativePath = itemWithPhotos.photos.firstOrNull()?.relativePath,
                     photoStorageManager = photoStorageManager,
                     label = item.name,
-                    size = 56.dp,
+                    size = 60.dp,
                     onClick = onPhotoSlotClick
                 )
 
