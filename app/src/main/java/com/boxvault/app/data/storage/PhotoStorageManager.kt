@@ -51,12 +51,8 @@ class PhotoStorageManager(
         }
 
         val rootCanonical = photosDirectory.canonicalFile
-        val targetCanonical = File(rootCanonical, sanitizedInput).canonicalFile
         val rootPrefix = rootCanonical.path + File.separator
-
-        if (!targetCanonical.path.startsWith(rootPrefix)) {
-            throw SecurityException("Resolved path escapes photos directory: $relativePath")
-        }
+        val targetCanonical = resolveCanonicalChild(rootCanonical, sanitizedInput, relativePath)
 
         // Backward compatibility: If the file does not exist at targetCanonical,
         // check whether an existing legacy file exists with swapped extension (.jpg <-> .webp)
@@ -181,8 +177,110 @@ class PhotoStorageManager(
         deletedCount
     }
 
+    private fun resolveCanonicalChild(
+        rootDir: File,
+        sanitizedRelativePath: String,
+        rawRelativePath: String = sanitizedRelativePath
+    ): File {
+        val rootCanonical = rootDir.canonicalFile
+        val targetCanonical = File(rootCanonical, sanitizedRelativePath).canonicalFile
+        val rootPrefix = rootCanonical.path + File.separator
+        if (!targetCanonical.path.startsWith(rootPrefix)) {
+            throw SecurityException("Resolved path escapes target directory: $rawRelativePath")
+        }
+        return targetCanonical
+    }
+
+    fun openPhotoInputStream(relativePath: String): InputStream {
+        val file = resolvePhotoFile(relativePath)
+        if (!file.exists() || !file.isFile) {
+            throw IllegalArgumentException("Photo file does not exist: $relativePath")
+        }
+        return file.inputStream().buffered()
+    }
+
+    /**
+     * Atomically replaces all files in [photosDirectory] with [stagedPhotos] (`relativePath -> stagedFile`)
+     * using a reversible directory swap inside [photosDirectory]'s parent directory.
+     *
+     * If copying staged files fails, [photosDirectory] is untouched.
+     * If [onPhotosSwapped] (e.g., database replacement) throws, the previous [photosDirectory]
+     * is restored from the rollback directory before rethrowing.
+     */
+    suspend fun replaceAllPhotosAtomically(
+        stagedPhotos: List<Pair<String, File>>,
+        onPhotosSwapped: suspend () -> Unit
+    ) {
+        val baseDir = photosDirectory.parentFile ?: photosDirectory
+        val incomingDir = File(baseDir, INCOMING_PHOTOS_DIR_NAME)
+        val rollbackDir = File(baseDir, ROLLBACK_PHOTOS_DIR_NAME)
+
+        withContext(ioDispatcher) {
+            if (incomingDir.exists()) incomingDir.deleteRecursively()
+            if (rollbackDir.exists()) rollbackDir.deleteRecursively()
+            incomingDir.mkdirs()
+
+            stagedPhotos.forEach { (relativePath, stagedFile) ->
+                // Validate relativePath with standard traversal rules first
+                resolvePhotoFile(relativePath)
+                val sanitized = relativePath.trim()
+                val destFile = resolveCanonicalChild(incomingDir, sanitized, relativePath)
+                destFile.parentFile?.mkdirs()
+                stagedFile.inputStream().buffered().use { input ->
+                    destFile.outputStream().buffered().use { output ->
+                        input.copyTo(output, DEFAULT_BUFFER_SIZE)
+                    }
+                }
+            }
+
+            if (photosDirectory.exists()) {
+                moveDirectory(photosDirectory, rollbackDir)
+            }
+            moveDirectory(incomingDir, photosDirectory)
+        }
+
+        try {
+            onPhotosSwapped()
+            withContext(ioDispatcher) {
+                if (rollbackDir.exists()) {
+                    rollbackDir.deleteRecursively()
+                }
+            }
+        } catch (t: Throwable) {
+            withContext(ioDispatcher) {
+                if (photosDirectory.exists()) {
+                    photosDirectory.deleteRecursively()
+                }
+                if (rollbackDir.exists()) {
+                    moveDirectory(rollbackDir, photosDirectory)
+                }
+            }
+            throw t
+        } finally {
+            withContext(ioDispatcher) {
+                if (incomingDir.exists()) {
+                    incomingDir.deleteRecursively()
+                }
+            }
+        }
+    }
+
+    private fun moveDirectory(source: File, target: File) {
+        if (target.exists()) {
+            target.deleteRecursively()
+        }
+        if (source.renameTo(target)) {
+            return
+        }
+        // Fallback if renameTo fails (e.g. open file handles or platform quirk)
+        source.copyRecursively(target, overwrite = true)
+        source.deleteRecursively()
+    }
+
     companion object {
         const val PHOTOS_DIR_NAME = "photos"
+        const val INCOMING_PHOTOS_DIR_NAME = "photos_restore_incoming"
+        const val ROLLBACK_PHOTOS_DIR_NAME = "photos_restore_rollback"
         const val DEFAULT_PHOTO_EXTENSION = "webp"
     }
 }
