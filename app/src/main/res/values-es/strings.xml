@@ -37,7 +37,7 @@
     <string name="photo_source_remove_desc">Desvincular foto de esta entrada</string>
 
     <!-- Offline Privacy Policy Dialog -->
-    <string name="privacy_title">Arquitectura de privacidad 100% sin conexión</string>
+    <string name="privacy_title" formatted="false">Arquitectura de privacidad 100% sin conexión</string>
     <string name="privacy_summary">BoxVault está diseñado desde cero sin dependencias de la nube. Sus datos de inventario son estrictamente de su propiedad y nunca salen de su dispositivo físico.</string>
     <string name="privacy_pillar_db_title">Base de datos SQLite 100% local en el dispositivo</string>
     <string name="privacy_pillar_db_desc">Cada caja, cantidad de artículos, categoría y referencia de foto se almacena exclusivamente en la base de datos Room SQLite privada de la app en su dispositivo.</string>
@@ -263,7 +263,7 @@
 
     <!-- Backup & Restore Screen -->
     <string name="backup_title">Copia de seguridad local ZIP y restauración</string>
-    <string name="backup_subtitle">Archivo SAF 100% sin conexión • Protegido con SHA-256 y Zip-Slip</string>
+    <string name="backup_subtitle" formatted="false">Archivo SAF 100% sin conexión • Protegido con SHA-256 y Zip-Slip</string>
     <string name="backup_processing_staging">Procesando archivo en el directorio de preparación aislado...</string>
     <string name="backup_inventory_title">Inventario actual en el dispositivo</string>
     <string name="backup_inventory_counts">%1$d Cajas • %2$d Artículos únicos (%3$d Cant. total)</string>
@@ -287,7 +287,7 @@
 
     <!-- QR Scanner Screen -->
     <string name="scanner_title">Escanear etiqueta QR de caja</string>
-    <string name="scanner_subtitle">Escáner ML Kit integrado 100% sin conexión</string>
+    <string name="scanner_subtitle" formatted="false">Escáner ML Kit integrado 100% sin conexión</string>
     <string name="scanner_toggle_torch">Alternar linterna</string>
     <string name="scanner_reticle_hint">Apunte a cualquier código QR de BoxVault — las cajas existentes se abren de inmediato; las etiquetas en blanco abren la configuración de Nueva Caja.</string>
     <string name="scanner_camera_perm_title">Permiso de cámara requerido para escanear QR en vivo</string>
@@ -307,12 +307,12 @@
 
     <!-- Onboarding Dialog -->
     <string name="onboarding_title">Bienvenido a BoxVault</string>
-    <string name="onboarding_subtitle">Su almacén personal 100% sin conexión y gestor de inventario físico.</string>
+    <string name="onboarding_subtitle" formatted="false">Su almacén personal 100% sin conexión y gestor de inventario físico.</string>
     <string name="onboarding_feature_rooms_title">Agrupación por habitaciones y ubicación</string>
     <string name="onboarding_feature_rooms_desc">Organice cajas en habitaciones personalizadas como Garaje, Ático o Salón con distintivos de color.</string>
     <string name="onboarding_feature_qr_title">Hojas de etiquetas con código QR</string>
     <string name="onboarding_feature_qr_desc">Genere e imprima hojas de etiquetas QR de alto contraste directamente en su impresora o expórtelas a PDF.</string>
-    <string name="onboarding_feature_privacy_title">100% sin conexión y privado</string>
+    <string name="onboarding_feature_privacy_title" formatted="false">100% sin conexión y privado</string>
     <string name="onboarding_feature_privacy_desc">Sin rastreo en la nube, cero permisos de red. Su inventario permanece íntegramente en su dispositivo.</string>
     <string name="onboarding_get_started">Empezar</string>
 </resources>

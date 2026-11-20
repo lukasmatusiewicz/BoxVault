@@ -135,6 +135,16 @@ class BackupRestoreViewModel(
         }
     }
 
+    fun reportError(message: String) {
+        _uiState.update {
+            it.copy(
+                isWorking = false,
+                statusMessage = null,
+                errorMessage = message
+            )
+        }
+    }
+
     fun clearMessages() {
         _uiState.update {
             it.copy(

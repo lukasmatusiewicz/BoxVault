@@ -2,6 +2,7 @@ package com.boxvault.app.ui.screens.boxdetail
 
 import android.content.ContentResolver
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -30,6 +31,8 @@ data class BoxDetailUiState(
     val filteredItemsWithPhotos: List<ItemWithPhotos> = emptyList(),
     val boxLevelPhotos: List<PhotoEntity> = emptyList(),
     val itemFilterQuery: String = "",
+    val draftItemPhotoBitmap: Bitmap? = null,
+    val draftItemPhotoBytes: ByteArray? = null,
     val isBoxDeleted: Boolean = false,
     val errorMessage: String? = null
 ) {
@@ -260,6 +263,79 @@ class BoxDetailViewModel(
 
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    fun loadDraftItemPhotoFromUri(
+        contentResolver: ContentResolver,
+        uri: Uri
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            runCatching {
+                val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    ?: throw IllegalArgumentException("Cannot open image stream from URI: $uri")
+                val boundsOptions = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, boundsOptions)
+
+                var sampleSize = 1
+                val maxPreviewDimension = 512
+                while (
+                    boundsOptions.outWidth / sampleSize > maxPreviewDimension ||
+                    boundsOptions.outHeight / sampleSize > maxPreviewDimension
+                ) {
+                    sampleSize *= 2
+                }
+                val decodeOptions = BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                }
+                val previewBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
+                bytes to previewBitmap
+            }.onSuccess { (bytes, previewBitmap) ->
+                _uiState.update {
+                    it.copy(
+                        draftItemPhotoBytes = bytes,
+                        draftItemPhotoBitmap = previewBitmap,
+                        errorMessage = null
+                    )
+                }
+            }.onFailure { err ->
+                _uiState.update {
+                    it.copy(errorMessage = err.message ?: "Failed to load selected photo.")
+                }
+            }
+        }
+    }
+
+    fun setDraftItemPhotoFromBitmap(bitmap: Bitmap) {
+        viewModelScope.launch(ioDispatcher) {
+            runCatching {
+                val stream = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                stream.toByteArray()
+            }.onSuccess { bytes ->
+                _uiState.update {
+                    it.copy(
+                        draftItemPhotoBitmap = bitmap,
+                        draftItemPhotoBytes = bytes,
+                        errorMessage = null
+                    )
+                }
+            }.onFailure { err ->
+                _uiState.update {
+                    it.copy(errorMessage = err.message ?: "Failed to process captured photo.")
+                }
+            }
+        }
+    }
+
+    fun clearDraftItemPhoto() {
+        _uiState.update {
+            it.copy(
+                draftItemPhotoBitmap = null,
+                draftItemPhotoBytes = null
+            )
+        }
     }
 
     class Factory(

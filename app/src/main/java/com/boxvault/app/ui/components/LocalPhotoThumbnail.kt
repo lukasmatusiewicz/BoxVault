@@ -17,8 +17,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,12 +56,13 @@ fun LocalPhotoThumbnail(
     contentDescription: String? = stringResource(R.string.photo_attached_cd),
     onDeleteClick: (() -> Unit)? = null
 ) {
-    val loadState by produceState<LocalPhotoLoadState>(
-        initialValue = LocalPhotoLoadState.Loading,
-        key1 = relativePath,
-        key2 = photoStorageManager
-    ) {
-        value = withContext(Dispatchers.IO) {
+    var loadState by remember(relativePath, photoStorageManager) {
+        mutableStateOf<LocalPhotoLoadState>(LocalPhotoLoadState.Loading)
+    }
+
+    LaunchedEffect(relativePath, photoStorageManager) {
+        loadState = LocalPhotoLoadState.Loading
+        loadState = withContext(Dispatchers.IO) {
             runCatching {
                 val bytes = photoStorageManager.readPhotoBytes(relativePath)
                 val boundsOptions = BitmapFactory.Options().apply {

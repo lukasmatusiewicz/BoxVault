@@ -100,11 +100,17 @@ fun PdfGeneratorScreen(
         contract = ActivityResultContracts.CreateDocument("application/pdf")
     ) { uri ->
         if (uri != null) {
-            val stream = runCatching {
+            val streamResult = runCatching {
                 context.contentResolver.openOutputStream(uri)
-            }.getOrNull()
+            }
+            val stream = streamResult.getOrNull()
             if (stream != null) {
                 viewModel.exportPdfToStream(stream)
+            } else {
+                val reason = streamResult.exceptionOrNull()?.message
+                viewModel.reportError(
+                    reason ?: "Unable to open the selected PDF output location."
+                )
             }
         }
     }
@@ -148,7 +154,11 @@ fun PdfGeneratorScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
+                            val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                            if (printManager == null) {
+                                viewModel.reportError("Android Print service is unavailable on this device.")
+                                return@IconButton
+                            }
                             val adapter = BoxVaultPrintDocumentAdapter(
                                 labels = uiState.activeLabelSpecs,
                                 preset = uiState.gridPreset,

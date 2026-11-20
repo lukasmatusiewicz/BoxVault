@@ -504,12 +504,6 @@ object QrSheetPdfGenerator {
     }
 
     private fun closePdfDocumentQuietly(pdfDocument: PdfDocument) {
-        runCatching {
-            val closeGuardField = PdfDocument::class.java.getDeclaredField("mCloseGuard")
-            closeGuardField.isAccessible = true
-            val closeGuard = closeGuardField.get(pdfDocument)
-            closeGuard?.javaClass?.getMethod("close")?.invoke(closeGuard)
-        }
         runCatching { pdfDocument.close() }
     }
 
