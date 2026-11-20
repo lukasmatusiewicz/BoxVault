@@ -129,4 +129,39 @@ class PhotoStorageManagerTest {
     fun `resolvePhotoFile rejects blank path`() {
         storageManager.resolvePhotoFile("   ")
     }
+
+    @Test
+    fun `replaceAllPhotosAtomically rolls back to original photos when commit callback throws`() = runTest {
+        val originalPayload = byteArrayOf(10, 20, 30, 40)
+        val originalPath = storageManager.savePhotoBytes(originalPayload, prefix = "orig")
+
+        val stagedDir = Files.createTempDirectory("staged_photos_test").toFile()
+        try {
+            val incomingFile = File(stagedDir, "new_photo.webp").apply {
+                writeBytes(byteArrayOf(99, 98, 97))
+            }
+
+            var threw = false
+            try {
+                storageManager.replaceAllPhotosAtomically(
+                    stagedPhotos = listOf("new_photo.webp" to incomingFile)
+                ) {
+                    // During callback, new photo is visible and original is in rollback
+                    assertTrue(storageManager.photoExists("new_photo.webp"))
+                    throw IllegalStateException("Simulated DB commit failure")
+                }
+            } catch (expected: IllegalStateException) {
+                threw = true
+            }
+
+            assertTrue(threw)
+            assertTrue(storageManager.photoExists(originalPath))
+            assertArrayEquals(originalPayload, storageManager.readPhotoBytes(originalPath))
+            assertFalse(storageManager.photoExists("new_photo.webp"))
+            assertFalse(File(tempBaseDir, PhotoStorageManager.INCOMING_PHOTOS_DIR_NAME).exists())
+            assertFalse(File(tempBaseDir, PhotoStorageManager.ROLLBACK_PHOTOS_DIR_NAME).exists())
+        } finally {
+            stagedDir.deleteRecursively()
+        }
+    }
 }

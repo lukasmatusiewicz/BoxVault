@@ -1,6 +1,8 @@
 package com.boxvault.app.data.backup
 
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import com.boxvault.app.data.local.entity.BoxEntity
 import com.boxvault.app.data.local.entity.ItemEntity
 import com.boxvault.app.data.local.entity.PhotoEntity
@@ -61,18 +63,21 @@ class BackupManager(
     private val repository: BoxVaultRepository,
     private val photoStorageManager: PhotoStorageManager,
     private val cacheDir: File,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val appVersion: String = DEFAULT_APP_VERSION
 ) {
     constructor(
         context: Context,
         repository: BoxVaultRepository,
         photoStorageManager: PhotoStorageManager,
-        ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+        ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+        appVersion: String = resolveAppVersion(context)
     ) : this(
         repository = repository,
         photoStorageManager = photoStorageManager,
         cacheDir = context.cacheDir,
-        ioDispatcher = ioDispatcher
+        ioDispatcher = ioDispatcher,
+        appVersion = appVersion
     )
 
     val stagingDirectory: File
@@ -140,15 +145,16 @@ class BackupManager(
         }
 
         val photosJson = JSONArray()
-        val photoPayloads = mutableListOf<Pair<PhotoEntity, ByteArray>>()
+        val exportablePhotos = mutableListOf<PhotoEntity>()
         var totalPhotoBytes = 0L
 
         photos.forEach { photo ->
             if (photoStorageManager.photoExists(photo.relativePath)) {
-                val bytes = photoStorageManager.readPhotoBytes(photo.relativePath)
-                val sha256 = computeSha256Hex(bytes)
-                totalPhotoBytes += bytes.size.toLong()
-                photoPayloads.add(photo to bytes)
+                val (sha256, sizeBytes) = photoStorageManager.openPhotoInputStream(photo.relativePath).use { input ->
+                    computeSha256HexAndSize(input)
+                }
+                totalPhotoBytes += sizeBytes
+                exportablePhotos.add(photo)
 
                 photosJson.put(
                     JSONObject().apply {
@@ -158,7 +164,7 @@ class BackupManager(
                         put("relativePath", photo.relativePath)
                         put("createdAt", photo.createdAt)
                         put("sha256", sha256)
-                        put("sizeBytes", bytes.size)
+                        put("sizeBytes", sizeBytes)
                     }
                 )
             }
@@ -166,7 +172,7 @@ class BackupManager(
 
         val manifestJson = JSONObject().apply {
             put("schemaVersion", CURRENT_SCHEMA_VERSION)
-            put("appVersion", "1.1.0")
+            put("appVersion", appVersion)
             put("exportedAt", exportedAt)
             put("rooms", roomsJson)
             put("boxes", boxesJson)
@@ -182,12 +188,14 @@ class BackupManager(
             zipOut.write(manifestBytes)
             zipOut.closeEntry()
 
-            // 2. Write each physical photo file under photos/<relativePath>
-            photoPayloads.forEach { (photo, bytes) ->
+            // 2. Stream each physical photo file under photos/<relativePath>
+            exportablePhotos.forEach { photo ->
                 val sanitizedRelPath = photo.relativePath.replace('\\', '/').trimStart('/')
                 val photoEntry = ZipEntry("$PHOTOS_ZIP_PREFIX$sanitizedRelPath")
                 zipOut.putNextEntry(photoEntry)
-                zipOut.write(bytes)
+                photoStorageManager.openPhotoInputStream(photo.relativePath).use { input ->
+                    input.copyTo(zipOut, DEFAULT_BUFFER_SIZE)
+                }
                 zipOut.closeEntry()
             }
             zipOut.finish()
@@ -196,7 +204,7 @@ class BackupManager(
         BackupExportSummary(
             boxCount = boxes.size,
             itemCount = items.size,
-            photoCount = photoPayloads.size,
+            photoCount = exportablePhotos.size,
             totalPhotoBytes = totalPhotoBytes,
             exportedAt = exportedAt,
             roomCount = rooms.size
@@ -283,29 +291,25 @@ class BackupManager(
                 stagingRoot = stagingRoot
             )
 
-            // Phase 3: Atomic Commit (only reached after 100% of security & checksum checks pass)
-            val stagedPhotoPayloads = stagedPhotos.map { staged ->
-                staged.entity to staged.stagedFile.readBytes()
-            }
+            // Phase 3: Reversible Atomic Commit (only reached after 100% of security & checksum checks pass)
+            val verifiedBytes = stagedPhotos.sumOf { it.sizeBytes }
+            val photoEntities = stagedPhotos.map { it.entity }
 
-            photoStorageManager.clearAllPhotoFiles()
-            var verifiedBytes = 0L
-            stagedPhotoPayloads.forEach { (photoEntity, bytes) ->
-                photoStorageManager.writePhotoBytesAtRelativePath(photoEntity.relativePath, bytes)
-                verifiedBytes += bytes.size.toLong()
+            photoStorageManager.replaceAllPhotosAtomically(
+                stagedPhotos = stagedPhotos.map { it.entity.relativePath to it.stagedFile }
+            ) {
+                repository.replaceAllInventoryData(
+                    rooms = parsedRooms,
+                    boxes = parsedBoxes,
+                    items = parsedItems,
+                    photos = photoEntities
+                )
             }
-
-            repository.replaceAllInventoryData(
-                rooms = parsedRooms,
-                boxes = parsedBoxes,
-                items = parsedItems,
-                photos = stagedPhotoPayloads.map { it.first }
-            )
 
             BackupRestoreSummary(
                 boxCount = parsedBoxes.size,
                 itemCount = parsedItems.size,
-                photoCount = stagedPhotoPayloads.size,
+                photoCount = stagedPhotos.size,
                 verifiedPhotoBytes = verifiedBytes,
                 backupTimestamp = backupTimestamp,
                 roomCount = parsedRooms.size
@@ -424,7 +428,8 @@ class BackupManager(
 
     private data class VerifiedStagedPhoto(
         val entity: PhotoEntity,
-        val stagedFile: File
+        val stagedFile: File,
+        val sizeBytes: Long
     )
 
     private fun parseAndVerifyStagedPhotos(
@@ -459,7 +464,9 @@ class BackupManager(
                 throw SecurityException("Staged photo file missing from backup archive: $relativePath")
             }
 
-            val actualSha256 = computeSha256Hex(stagedFile.readBytes())
+            val (actualSha256, actualSizeBytes) = stagedFile.inputStream().buffered().use { input ->
+                computeSha256HexAndSize(input)
+            }
             if (!actualSha256.equals(expectedSha256, ignoreCase = true)) {
                 throw SecurityException(
                     "SHA-256 checksum mismatch for photo '$relativePath': expected $expectedSha256, got $actualSha256"
@@ -475,7 +482,8 @@ class BackupManager(
                         relativePath = relativePath,
                         createdAt = createdAt
                     ),
-                    stagedFile = stagedFile
+                    stagedFile = stagedFile,
+                    sizeBytes = actualSizeBytes
                 )
             )
         }
@@ -515,6 +523,7 @@ class BackupManager(
     }
 
     companion object {
+        const val DEFAULT_APP_VERSION = "1.0.0"
         const val CURRENT_SCHEMA_VERSION = 2
         const val MANIFEST_FILE_NAME = "backup_manifest.json"
         const val PHOTOS_ZIP_PREFIX = "photos/"
@@ -523,8 +532,40 @@ class BackupManager(
         const val MAX_TOTAL_ARCHIVE_BYTES = 1L * 1024L * 1024L * 1024L // 1 GB cumulative archive guard
         const val MAX_SINGLE_ENTRY_BYTES = 50L * 1024L * 1024L // 50 MB per file guard
 
+        fun resolveAppVersion(context: Context): String {
+            return runCatching {
+                val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    context.packageManager.getPackageInfo(
+                        context.packageName,
+                        PackageManager.PackageInfoFlags.of(0)
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.packageManager.getPackageInfo(context.packageName, 0)
+                }
+                packageInfo.versionName?.takeIf { it.isNotBlank() } ?: DEFAULT_APP_VERSION
+            }.getOrDefault(DEFAULT_APP_VERSION)
+        }
+
+        fun computeSha256HexAndSize(inputStream: InputStream): Pair<String, Long> {
+            val digest = MessageDigest.getInstance("SHA-256")
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            var totalBytes = 0L
+            while (true) {
+                val read = inputStream.read(buffer)
+                if (read <= 0) break
+                digest.update(buffer, 0, read)
+                totalBytes += read
+            }
+            return toHexString(digest.digest()) to totalBytes
+        }
+
         fun computeSha256Hex(bytes: ByteArray): String {
             val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
+            return toHexString(digest)
+        }
+
+        private fun toHexString(digest: ByteArray): String {
             val hexChars = CharArray(digest.size * 2)
             val hexAlphabet = "0123456789abcdef"
             for (i in digest.indices) {

@@ -413,4 +413,135 @@ class BackupManagerTest {
         assertTrue(restoreState.errorMessage ?: "restore failed", restoreOk)
         assertNotNull(restoreState.lastRestoreSummary)
     }
+
+    @Test
+    fun `restoreBackupFromZip rolls back live photos and DB if database commit fails`() = runTest(testDispatcher) {
+        val liveBox = repository.upsertBox(
+            BoxEntity(
+                id = "live-box-rollback",
+                shortCode = "BOX-777",
+                name = "Live Rollback Box",
+                location = "Basement"
+            )
+        )
+        val livePhotoBytes = byteArrayOf(7, 8, 9, 10, 11)
+        val livePhoto = repository.attachPhotoToBox(liveBox.id, livePhotoBytes)
+
+        val incomingPhotoBytes = byteArrayOf(55, 66, 77, 88)
+        val incomingSha = BackupManager.computeSha256Hex(incomingPhotoBytes)
+
+        // Valid photo + SHA-256, but item references a non-existent boxId -> SQLite FK failure in replaceAllInventoryData
+        val failingManifest = JSONObject().apply {
+            put("schemaVersion", 2)
+            put("appVersion", BackupManager.DEFAULT_APP_VERSION)
+            put("exportedAt", System.currentTimeMillis())
+            put("rooms", JSONArray())
+            put(
+                "boxes",
+                JSONArray().put(
+                    JSONObject().apply {
+                        put("id", "new-box-1")
+                        put("shortCode", "BOX-888")
+                        put("name", "New Box")
+                        put("location", "Attic")
+                    }
+                )
+            )
+            put(
+                "items",
+                JSONArray().put(
+                    JSONObject().apply {
+                        put("id", "orphan-item-1")
+                        put("boxId", "missing-box-fk-target")
+                        put("name", "Orphan Item")
+                        put("quantity", 1)
+                    }
+                )
+            )
+            put(
+                "photos",
+                JSONArray().put(
+                    JSONObject().apply {
+                        put("id", "incoming-photo-1")
+                        put("boxId", "new-box-1")
+                        put("itemId", JSONObject.NULL)
+                        put("relativePath", "incoming_photo.webp")
+                        put("createdAt", System.currentTimeMillis())
+                        put("sha256", incomingSha)
+                        put("sizeBytes", incomingPhotoBytes.size)
+                    }
+                )
+            )
+        }
+
+        val zipBytes = ByteArrayOutputStream().apply {
+            ZipOutputStream(this).use { zipOut ->
+                zipOut.putNextEntry(ZipEntry(BackupManager.MANIFEST_FILE_NAME))
+                zipOut.write(failingManifest.toString().toByteArray(Charsets.UTF_8))
+                zipOut.closeEntry()
+
+                zipOut.putNextEntry(ZipEntry("photos/incoming_photo.webp"))
+                zipOut.write(incomingPhotoBytes)
+                zipOut.closeEntry()
+            }
+        }.toByteArray()
+
+        var threw = false
+        try {
+            backupManager.restoreBackupFromZip(ByteArrayInputStream(zipBytes))
+        } catch (_: Exception) {
+            threw = true
+        }
+        assertTrue("Expected DB constraint exception during restore", threw)
+
+        // Live DB and live photos must be completely restored/preserved
+        val boxes = repository.getAllBoxes()
+        assertEquals(1, boxes.size)
+        assertEquals("BOX-777", boxes.first().shortCode)
+        assertTrue(photoStorageManager.photoExists(livePhoto.relativePath))
+        assertArrayEquals(livePhotoBytes, photoStorageManager.readPhotoBytes(livePhoto.relativePath))
+        assertFalse(photoStorageManager.photoExists("incoming_photo.webp"))
+        assertFalse(backupManager.stagingDirectory.exists())
+        assertFalse(File(tempFilesDir, PhotoStorageManager.INCOMING_PHOTOS_DIR_NAME).exists())
+        assertFalse(File(tempFilesDir, PhotoStorageManager.ROLLBACK_PHOTOS_DIR_NAME).exists())
+    }
+
+    @Test
+    fun `streaming multi-photo export and restore preserves SHA-256 and sets expected appVersion`() = runTest(testDispatcher) {
+        val box = repository.createBox(name = "Multi Photo Box", shortCode = "BOX-500", location = "Garage")
+        val photo1Bytes = ByteArray(16_384) { (it % 251).toByte() }
+        val photo2Bytes = ByteArray(24_576) { ((it * 3) % 241).toByte() }
+        val photo1 = repository.attachPhotoToBox(box.id, photo1Bytes)
+        val photo2 = repository.attachPhotoToBox(box.id, photo2Bytes)
+
+        val zipOut = ByteArrayOutputStream()
+        val exportSummary = backupManager.exportBackupToZip(zipOut)
+        assertEquals(2, exportSummary.photoCount)
+        assertEquals((photo1Bytes.size + photo2Bytes.size).toLong(), exportSummary.totalPhotoBytes)
+
+        // Verify manifest appVersion matches DEFAULT_APP_VERSION (1.0.0)
+        var manifestAppVersion: String? = null
+        java.util.zip.ZipInputStream(ByteArrayInputStream(zipOut.toByteArray())).use { zipIn ->
+            var entry = zipIn.nextEntry
+            while (entry != null) {
+                if (entry.name == BackupManager.MANIFEST_FILE_NAME) {
+                    val json = JSONObject(zipIn.readBytes().toString(Charsets.UTF_8))
+                    manifestAppVersion = json.optString("appVersion")
+                    break
+                }
+                entry = zipIn.nextEntry
+            }
+        }
+        assertEquals(BackupManager.DEFAULT_APP_VERSION, manifestAppVersion)
+
+        repository.deleteBox(box.id)
+        assertFalse(photoStorageManager.photoExists(photo1.relativePath))
+        assertFalse(photoStorageManager.photoExists(photo2.relativePath))
+
+        val restoreSummary = backupManager.restoreBackupFromZip(ByteArrayInputStream(zipOut.toByteArray()))
+        assertEquals(2, restoreSummary.photoCount)
+        assertEquals((photo1Bytes.size + photo2Bytes.size).toLong(), restoreSummary.verifiedPhotoBytes)
+        assertArrayEquals(photo1Bytes, photoStorageManager.readPhotoBytes(photo1.relativePath))
+        assertArrayEquals(photo2Bytes, photoStorageManager.readPhotoBytes(photo2.relativePath))
+    }
 }
