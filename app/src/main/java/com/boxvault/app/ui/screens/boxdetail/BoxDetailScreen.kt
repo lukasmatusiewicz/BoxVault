@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -104,7 +103,6 @@ import com.boxvault.app.ui.components.PhotoSlotCard
 import com.boxvault.app.ui.components.PhotoSourceSelectionDialog
 import com.boxvault.app.ui.theme.parseBoxColor
 import com.boxvault.app.util.qr.QrCodeGenerator
-import java.io.ByteArrayOutputStream
 
 private const val DRAFT_ITEM_PHOTO_TARGET = "__DRAFT_NEW_ITEM_PHOTO__"
 
@@ -132,10 +130,6 @@ fun BoxDetailScreen(
     var showQrPreviewDialog by remember { mutableStateOf(false) }
     var pendingPhotoTargetItemId by remember { mutableStateOf<String?>(null) }
 
-    // Draft photo state for ItemEditDialog (when adding a brand-new item)
-    var draftItemPhotoBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var draftItemPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
-
     // Unified Photo Source Selection Dialog state
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     val defaultPhotoSourceTitle = stringResource(R.string.photo_source_dialog_title)
@@ -152,10 +146,7 @@ fun BoxDetailScreen(
     ) { bitmap: Bitmap? ->
         if (bitmap != null) {
             if (pendingPhotoTargetItemId == DRAFT_ITEM_PHOTO_TARGET) {
-                draftItemPhotoBitmap = bitmap
-                val stream = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-                draftItemPhotoBytes = stream.toByteArray()
+                viewModel.setDraftItemPhotoFromBitmap(bitmap)
             } else {
                 viewModel.attachPhotoFromBitmap(bitmap, pendingPhotoTargetItemId)
             }
@@ -169,13 +160,7 @@ fun BoxDetailScreen(
     ) { uri ->
         if (uri != null) {
             if (pendingPhotoTargetItemId == DRAFT_ITEM_PHOTO_TARGET) {
-                runCatching {
-                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                    if (bytes != null) {
-                        draftItemPhotoBytes = bytes
-                        draftItemPhotoBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    }
-                }
+                viewModel.loadDraftItemPhotoFromUri(context.contentResolver, uri)
             } else {
                 viewModel.attachPhotoFromUri(context.contentResolver, uri, pendingPhotoTargetItemId)
             }
@@ -280,20 +265,18 @@ fun BoxDetailScreen(
             val firstPhoto = existingPhotos.firstOrNull()
             photoSourceTargetItemId = itemBeingEdited?.id
             photoSourceTitle = context.getString(R.string.box_detail_item_photo)
-            photoSourceHasExistingPhoto = firstPhoto != null || draftItemPhotoBytes != null
+            photoSourceHasExistingPhoto = firstPhoto != null || uiState.draftItemPhotoBytes != null
             photoSourceOnRemovePhoto = {
-                draftItemPhotoBitmap = null
-                draftItemPhotoBytes = null
+                viewModel.clearDraftItemPhoto()
                 firstPhoto?.let { viewModel.deletePhoto(it.id) }
             }
             showPhotoSourceDialog = true
         } else {
             photoSourceTargetItemId = DRAFT_ITEM_PHOTO_TARGET
             photoSourceTitle = context.getString(R.string.box_detail_item_photo)
-            photoSourceHasExistingPhoto = draftItemPhotoBytes != null
+            photoSourceHasExistingPhoto = uiState.draftItemPhotoBytes != null
             photoSourceOnRemovePhoto = {
-                draftItemPhotoBitmap = null
-                draftItemPhotoBytes = null
+                viewModel.clearDraftItemPhoto()
             }
             showPhotoSourceDialog = true
         }
@@ -439,8 +422,7 @@ fun BoxDetailScreen(
                             AssistChip(
                                 onClick = {
                                     itemBeingEdited = null
-                                    draftItemPhotoBitmap = null
-                                    draftItemPhotoBytes = null
+                                    viewModel.clearDraftItemPhoto()
                                     showAddOrEditItemDialog = true
                                 },
                                 label = { Text(stringResource(R.string.box_detail_add_single_item)) },
@@ -524,8 +506,7 @@ fun BoxDetailScreen(
                             },
                             onEdit = {
                                 itemBeingEdited = itemWithPhotos.item
-                                draftItemPhotoBitmap = null
-                                draftItemPhotoBytes = null
+                                viewModel.clearDraftItemPhoto()
                                 showAddOrEditItemDialog = true
                             },
                             onDelete = {
@@ -557,13 +538,12 @@ fun BoxDetailScreen(
             initialItem = itemBeingEdited,
             existingPhotos = existingPhotos,
             photoStorageManager = photoStorageManager,
-            draftBitmap = draftItemPhotoBitmap,
-            draftPhotoBytes = draftItemPhotoBytes,
+            draftBitmap = uiState.draftItemPhotoBitmap,
+            draftPhotoBytes = uiState.draftItemPhotoBytes,
             onDismiss = {
                 showAddOrEditItemDialog = false
                 itemBeingEdited = null
-                draftItemPhotoBitmap = null
-                draftItemPhotoBytes = null
+                viewModel.clearDraftItemPhoto()
             },
             onPhotoSlotClick = openItemEditPhotoSelection,
             onConfirm = { name, qty, category, notes, draftBytes ->
@@ -578,8 +558,7 @@ fun BoxDetailScreen(
                 )
                 showAddOrEditItemDialog = false
                 itemBeingEdited = null
-                draftItemPhotoBitmap = null
-                draftItemPhotoBytes = null
+                viewModel.clearDraftItemPhoto()
             }
         )
     }

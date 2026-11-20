@@ -37,7 +37,7 @@
     <string name="photo_source_remove_desc">Détacher la photo de cette entrée</string>
 
     <!-- Offline Privacy Policy Dialog -->
-    <string name="privacy_title">Architecture de confidentialité 100% hors ligne</string>
+    <string name="privacy_title" formatted="false">Architecture de confidentialité 100% hors ligne</string>
     <string name="privacy_summary">BoxVault est conçu dès le départ sans aucune dépendance au cloud. Vos données d\'inventaire vous appartiennent exclusivement et ne quittent jamais votre appareil physique.</string>
     <string name="privacy_pillar_db_title">Base de données SQLite 100% locale sur l\'appareil</string>
     <string name="privacy_pillar_db_desc">Chaque boîte, quantité d\'articles, catégorie et référence photo est stockée exclusivement dans votre base locale Room SQLite privée.</string>
@@ -263,7 +263,7 @@
 
     <!-- Backup & Restore Screen -->
     <string name="backup_title">Sauvegarde et restauration locale ZIP</string>
-    <string name="backup_subtitle">Archive SAF 100% hors ligne • Protégée par SHA-256 et Zip-Slip</string>
+    <string name="backup_subtitle" formatted="false">Archive SAF 100% hors ligne • Protégée par SHA-256 et Zip-Slip</string>
     <string name="backup_processing_staging">Traitement de l\'archive dans le répertoire temporaire isolé...</string>
     <string name="backup_inventory_title">Inventaire actuel sur l\'appareil</string>
     <string name="backup_inventory_counts">%1$d Boîtes • %2$d Articles uniques (%3$d Qté totale)</string>
@@ -287,7 +287,7 @@
 
     <!-- QR Scanner Screen -->
     <string name="scanner_title">Scanner l\'étiquette QR d\'une boîte</string>
-    <string name="scanner_subtitle">Scanner ML Kit 100% hors ligne intégré</string>
+    <string name="scanner_subtitle" formatted="false">Scanner ML Kit 100% hors ligne intégré</string>
     <string name="scanner_toggle_torch">Activer/désactiver la lampe</string>
     <string name="scanner_reticle_hint">Visez n\'importe quel code QR BoxVault — les boîtes existantes s\'ouvrent immédiatement ; les étiquettes vierges ouvrent la création d\'une boîte.</string>
     <string name="scanner_camera_perm_title">Autorisation caméra requise pour le scan QR</string>
@@ -307,12 +307,12 @@
 
     <!-- Onboarding Dialog -->
     <string name="onboarding_title">Bienvenue sur BoxVault</string>
-    <string name="onboarding_subtitle">Votre coffre de stockage 100% hors ligne et gestionnaire d\'inventaire physique.</string>
+    <string name="onboarding_subtitle" formatted="false">Votre coffre de stockage 100% hors ligne et gestionnaire d\'inventaire physique.</string>
     <string name="onboarding_feature_rooms_title">Regroupement par pièces et emplacements</string>
     <string name="onboarding_feature_rooms_desc">Organisez les boîtes dans des pièces personnalisées comme Garage, Grenier ou Salon avec des badges colorés.</string>
     <string name="onboarding_feature_qr_title">Planches d\'étiquettes avec code QR</string>
     <string name="onboarding_feature_qr_desc">Générez et imprimez des planches d\'étiquettes QR à haut contraste directement sur votre imprimante ou en PDF.</string>
-    <string name="onboarding_feature_privacy_title">100% hors ligne et privé</string>
+    <string name="onboarding_feature_privacy_title" formatted="false">100% hors ligne et privé</string>
     <string name="onboarding_feature_privacy_desc">Zéro suivi dans le cloud, aucune autorisation réseau. Votre inventaire reste exclusivement sur votre appareil.</string>
     <string name="onboarding_get_started">Commencer</string>
 </resources>

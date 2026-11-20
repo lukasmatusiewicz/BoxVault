@@ -18,6 +18,9 @@ class SensoryFeedbackManager(
     private val audioManager: AudioManager? by lazy {
         context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
     }
+    private val toneLock = Any()
+    @Volatile
+    private var toneGenerator: ToneGenerator? = null
 
     fun playClickSound() {
         if (!userPreferencesManager.isSoundEffectsEnabled()) return
@@ -29,8 +32,19 @@ class SensoryFeedbackManager(
     fun playScanChime() {
         if (!userPreferencesManager.isSoundEffectsEnabled()) return
         runCatching {
-            val toneGen = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
-            toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
+            synchronized(toneLock) {
+                val generator = toneGenerator ?: ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80).also {
+                    toneGenerator = it
+                }
+                generator.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
+            }
+        }
+    }
+
+    fun release() {
+        synchronized(toneLock) {
+            runCatching { toneGenerator?.release() }
+            toneGenerator = null
         }
     }
 

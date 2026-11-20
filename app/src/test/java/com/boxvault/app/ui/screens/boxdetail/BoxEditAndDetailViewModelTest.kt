@@ -316,4 +316,34 @@ class BoxEditAndDetailViewModelTest {
         assertTrue(photoStorageManager.photoExists(photo.relativePath))
         assertTrue(photo.relativePath.endsWith(".webp"))
     }
+
+    @Test
+    fun `loadDraftItemPhotoFromUri loads bytes off main thread, handles errors, and clears cleanly`() = runTest(testDispatcher) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val box = repository.createBox(
+            name = "Draft URI Box",
+            shortCode = "BOX-023",
+            location = "Shelf"
+        )
+        val detailVm = BoxDetailViewModel(repository, box.id, testDispatcher)
+        detailVm.uiState.first { !it.isLoading && it.box != null }
+
+        val tempFile = File(context.cacheDir, "draft_test_${System.currentTimeMillis()}.png").apply {
+            writeBytes(byteArrayOf(1, 2, 3, 4, 5, 6))
+        }
+        detailVm.loadDraftItemPhotoFromUri(context.contentResolver, Uri.fromFile(tempFile))
+        val loadedState = detailVm.uiState.first { it.draftItemPhotoBytes != null }
+        assertEquals(6, loadedState.draftItemPhotoBytes?.size)
+
+        detailVm.clearDraftItemPhoto()
+        val clearedState = detailVm.uiState.first { it.draftItemPhotoBytes == null && it.draftItemPhotoBitmap == null }
+        assertNull(clearedState.draftItemPhotoBytes)
+
+        val missingUri = Uri.fromFile(File(context.cacheDir, "nonexistent_${System.currentTimeMillis()}.png"))
+        detailVm.loadDraftItemPhotoFromUri(context.contentResolver, missingUri)
+        val errorState = detailVm.uiState.first { it.errorMessage != null }
+        assertNotNull(errorState.errorMessage)
+
+        tempFile.delete()
+    }
 }

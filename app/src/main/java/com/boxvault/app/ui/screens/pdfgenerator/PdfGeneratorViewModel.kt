@@ -274,6 +274,16 @@ class PdfGeneratorViewModel(
         }
     }
 
+    fun reportError(message: String) {
+        _uiState.update {
+            it.copy(
+                isExporting = false,
+                statusMessage = null,
+                errorMessage = message
+            )
+        }
+    }
+
     class Factory(
         private val repository: BoxVaultRepository,
         private val initialBoxId: String? = null

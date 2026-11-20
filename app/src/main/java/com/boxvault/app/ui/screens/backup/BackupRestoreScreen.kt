@@ -73,11 +73,17 @@ fun BackupRestoreScreen(
         contract = ActivityResultContracts.CreateDocument("application/zip")
     ) { uri ->
         if (uri != null) {
-            val outputStream = runCatching {
+            val streamResult = runCatching {
                 context.contentResolver.openOutputStream(uri)
-            }.getOrNull()
+            }
+            val outputStream = streamResult.getOrNull()
             if (outputStream != null) {
                 viewModel.exportBackup(outputStream)
+            } else {
+                val reason = streamResult.exceptionOrNull()?.message
+                viewModel.reportError(
+                    reason ?: "Unable to open the selected ZIP export destination."
+                )
             }
         }
     }
@@ -383,11 +389,17 @@ fun BackupRestoreScreen(
                         val targetUri = pendingRestoreUri
                         pendingRestoreUri = null
                         if (targetUri != null) {
-                            val inputStream = runCatching {
+                            val streamResult = runCatching {
                                 context.contentResolver.openInputStream(targetUri)
-                            }.getOrNull()
+                            }
+                            val inputStream = streamResult.getOrNull()
                             if (inputStream != null) {
                                 viewModel.restoreBackup(inputStream)
+                            } else {
+                                val reason = streamResult.exceptionOrNull()?.message
+                                viewModel.reportError(
+                                    reason ?: "Unable to open the selected ZIP backup file."
+                                )
                             }
                         }
                     }

@@ -110,4 +110,16 @@ class SensoryFeedbackManagerTest {
         preferencesManager.setSoundEffectsEnabled(false)
         sensoryManager.playScanChime()
     }
+
+    @Test
+    fun playScanChime_and_release_areSafeAcrossRepeatedCalls() {
+        preferencesManager.setSoundEffectsEnabled(true)
+        sensoryManager.playScanChime()
+        sensoryManager.playScanChime()
+        sensoryManager.release()
+        // Calling release twice and playing again after release must not throw
+        sensoryManager.release()
+        sensoryManager.playScanChime()
+        sensoryManager.release()
+    }
 }
