@@ -7,10 +7,10 @@
 | <img src="docs/screenshots/01_dashboard.png" width="240" alt="Dashboard Screen" /> | <img src="docs/screenshots/02_box_detail.png" width="240" alt="Box Detail Screen" /> | <img src="docs/screenshots/03_bulk_entry.png" width="240" alt="Fast Bulk Entry Screen" /> | <img src="docs/screenshots/04_pdf_generator.png" width="240" alt="PDF Label Sheets Screen" /> |
 | Edge-to-edge branding header, 3-card Utility Hub, and collapsible Room sections with live stats | High-visibility photo slots, item inventory counter, and tap-to-enlarge QR preview | Rapid keyboard-friendly cataloging with live "Added This Session" feed | Native vector PDF & Direct Print with presets for A4 & US Letter sheets |
 
-# 📦 BoxVault — 100% Offline, High-Security QR Storage & Inventory Catalog for Android
+# 📦 BoxVault — 100% Offline QR Storage & Inventory Catalog for Android
 
 [![Android CI & Security Audit](https://github.com/lukasmatusiewicz/BoxVault/actions/workflows/android-ci.yml/badge.svg)](https://github.com/lukasmatusiewicz/BoxVault/actions/workflows/android-ci.yml)
-[![Code Coverage (Kover)](https://img.shields.io/badge/coverage-80.26%25%20lines%20%7C%2081.4%25%20instr-brightgreen?logo=kotlin)](app/build/reports/kover/htmlDebug/index.html)
+[![Code Coverage (Kover)](https://img.shields.io/badge/coverage-85.85%25%20lines%20%7C%2085.53%25%20instr-brightgreen?logo=kotlin)](app/build/reports/kover/htmlDebug/index.html)
 [![100% Offline Verified](https://img.shields.io/badge/network%20permissions-0%20(100%25%20offline)-blue?logo=android)](app/src/main/AndroidManifest.xml)
 [![Room SQLite (Schema v2)](https://img.shields.io/badge/Room%20SQLite-Schema%20v2-003B57?logo=sqlite&logoColor=white)](app/src/main/java/com/boxvault/app/data/local)
 [![WebP Storage](https://img.shields.io/badge/Image%20Format-WebP%20(1600px%20%7C%2082%25)-009688?logo=google&logoColor=white)](app/src/main/java/com/boxvault/app/util/image)
@@ -18,7 +18,7 @@
 [![MinSDK 26+](https://img.shields.io/badge/MinSDK-26%2B%20(Android%208.0%2B)-3DDC84?logo=android&logoColor=white)](app/build.gradle.kts)
 [![Cost: $0 Local-First](https://img.shields.io/badge/cloud%20cost-%240%20forever-amber)](#security--privacy-architecture)
 
-**BoxVault** is a privacy-first, 100% local Android application engineered for cataloging physical storage boxes, garage totes, basement shelves, and workshop bins using immutable QR codes. It operates with **zero network permissions**, **zero cloud accounts**, and **zero recurring costs**—all data, photos, QR generation, barcode scanning, printable PDF rendering, and cryptographic `.zip` backups execute strictly on-device.
+**BoxVault** is a privacy-first, 100% local Android application engineered for cataloging physical storage boxes, garage totes, basement shelves, and workshop bins using immutable QR codes. It operates with **zero network permissions**, **zero cloud accounts**, and **zero recurring costs**—all data, photos, QR generation, barcode scanning, printable PDF rendering, and integrity-verified `.zip` backups execute strictly on-device.
 
 ---
 
@@ -31,7 +31,7 @@
 - **Collapsible Animated Sections**: Expand and collapse individual rooms with smooth `expandVertically` and `shrinkVertically` transitions.
 
 ### 2. High-Efficiency WebP Image Storage (`PhotoCompressor`)
-- **Lossy WebP Compression**: Uses Android native `Bitmap.CompressFormat.WEBP_LOSSY` at 82% quality with 1600px longest-edge downsampling, slashing storage footprint by ~60% compared to legacy JPEG while maintaining crisp clarity.
+- **Lossy WebP Compression**: Uses Android native `Bitmap.CompressFormat.WEBP_LOSSY` at 82% quality with 1600px longest-edge downsampling, reducing storage footprint compared to uncompressed or legacy JPEG photos while maintaining crisp clarity.
 - **Automatic EXIF Normalization**: Automatically respects camera orientation tags so vertical and horizontal shots never render sideways.
 - **Backward-Compatible Archive Decoding**: Safely extracts and displays older JPEG backups alongside new WebP photo archives without data loss.
 
@@ -80,12 +80,13 @@
 - **Persistent Keyboard Focus**: Pressing `ImeAction.Next` / `Enter` or tapping **Add & Keep Typing** inserts the item, increments the session counter, resets quantity to `1`, and keeps the soft keyboard open with focus locked on the Item Name field.
 
 ### 12. Portable SAF `.ZIP` Backups & Atomic Staged Restore (`BackupManager`)
-- **Portable SAF `.ZIP` Export**: Exports `backup_manifest.json` (schema version, timestamps, rooms, boxes, items, and photo metadata with per-file **SHA-256 hex digests**) alongside `photos/<filename>` via Android's Storage Access Framework (`CreateDocument("application/zip")`).
+- **Portable SAF `.ZIP` Export**: Streams `backup_manifest.json` (schema version, timestamps, rooms, boxes, items, and photo metadata with per-file **SHA-256 hex digests**) alongside `photos/<filename>` via Android's Storage Access Framework (`CreateDocument("application/zip")`). Exported `.zip` archives are **unencrypted portable archives**, so store exported backup files securely.
+- **Data Retention Note**: Because `android:allowBackup="false"` and zero cloud sync are enforced, uninstalling the app permanently removes local data unless you have exported a `.zip` backup first.
 - **Atomic Staged Restore (`cacheDir/restore_staging`)**:
   1. Extracts incoming `.zip` archives into an isolated staging directory (`cacheDir/restore_staging`)—**never mutating live Room tables or `filesDir/photos` while reading the stream**.
-  2. Enforces strict **Zip-Slip path traversal defense** (`SecurityException` on any `..`, absolute path, or canonical path escape).
-  3. Recomputes **SHA-256 checksums** on every staged photo file and verifies 100% match against `backup_manifest.json`.
-  4. Atomically swaps the verified data into Room and `PhotoStorageManager`, and unconditionally wipes `cacheDir/restore_staging` in a `finally` block.
+  2. Enforces strict **Zip-Slip path traversal defense** (`SecurityException` on any `..`, absolute path, or canonical path escape) alongside entry-count and byte-size limits.
+  3. Recomputes **SHA-256 checksums** via streaming I/O on every staged photo file and verifies 100% match against `backup_manifest.json`.
+  4. Performs a reversible atomic directory swap (`photos_restore_incoming` / `photos_restore_rollback`) before committing Room's `replaceAllInventoryData(...)` transaction (rolling back live photos if the DB commit fails), and unconditionally wipes `cacheDir/restore_staging` in a `finally` block.
 
 ---
 
@@ -121,7 +122,7 @@ flowchart TD
         SensoryMgr["SensoryFeedbackManager (Audio Click, Scan Chime & Tactile Haptics)"]
     end
 
-    subgraph Core["Offline Domain, Imaging, QR, PDF & Cryptographic Backup Engines"]
+    subgraph Core["Offline Domain, Imaging, QR, PDF & Backup Engines"]
         Repo["BoxVaultRepository"]
         QrGen["QrCodeGenerator (ZXing Core)"]
         PdfGen["QrSheetPdfGenerator (Native PdfDocument)"]
@@ -176,27 +177,30 @@ flowchart TD
 
 ## 🧪 Shift-Left Unit Test Suite & Code Coverage (Kotlinx Kover)
 
-BoxVault uses a shift-left JVM + Robolectric + Room In-Memory test suite (`51` unit tests across `13` test classes) measured by **Kotlinx Kover**:
+BoxVault uses a shift-left JVM + Robolectric + Room In-Memory test suite (`101` unit tests across `18` test suites) measured by **Kotlinx Kover**:
 
 | Metric | Percentage | Status |
 | :--- | :---: | :---: |
-| **Line Coverage** | **80.26%** | Met Kover Minimum (80%) |
-| **Instruction Coverage** | **81.4%** | Passing |
-| **Unit Test Pass Rate** | **100.0%** (`51 / 51`) | Passing |
+| **Line Coverage** | **85.85%** (`1972 / 2297`) | Met Kover Minimum (80%) |
+| **Instruction Coverage** | **85.53%** (`13257 / 15499`) | Passing |
+| **Branch Coverage** | **55.11%** (`453 / 822`) | Measured |
+| **Unit Test Pass Rate** | **100.0%** (`101 / 101`) | Passing |
 
 ### Key Test Suites
 - [`RoomDaoTest.kt`](app/src/test/java/com/boxvault/app/data/local/dao/RoomDaoTest.kt) — Room entity relational queries, foreign key cascade safety, and box grouping.
 - [`BoxVaultDaoTest.kt`](app/src/test/java/com/boxvault/app/data/local/dao/BoxVaultDaoTest.kt) — Room relational queries, cascading deletes, and indexed SQL search across boxes and items.
-- [`PhotoStorageManagerTest.kt`](app/src/test/java/com/boxvault/app/data/storage/PhotoStorageManagerTest.kt) — App-private WebP photo read/write, orphan cleanup, and `SecurityException` path traversal rejection.
+- [`PhotoStorageManagerTest.kt`](app/src/test/java/com/boxvault/app/data/storage/PhotoStorageManagerTest.kt) — App-private WebP photo read/write, orphan cleanup, atomic rollback swap, and `SecurityException` path traversal rejection.
 - [`BoxVaultRepositoryTest.kt`](app/src/test/java/com/boxvault/app/data/repository/BoxVaultRepositoryTest.kt) — Sequential short-code generation, immutable QR payload resolution after box rename/move, and cascading file cleanup.
-- [`DashboardViewModelTest.kt`](app/src/test/java/com/boxvault/app/ui/screens/dashboard/DashboardViewModelTest.kt), [`BoxEditAndDetailViewModelTest.kt`](app/src/test/java/com/boxvault/app/ui/screens/boxdetail/BoxEditAndDetailViewModelTest.kt), [`BulkEntryViewModelTest.kt`](app/src/test/java/com/boxvault/app/ui/screens/bulkentry/BulkEntryViewModelTest.kt) — Reactive UI state flows, duplicate short-code guards, and fast bulk item entry session counters.
+- [`DashboardViewModelTest.kt`](app/src/test/java/com/boxvault/app/ui/screens/dashboard/DashboardViewModelTest.kt), [`BoxEditAndDetailViewModelTest.kt`](app/src/test/java/com/boxvault/app/ui/screens/boxdetail/BoxEditAndDetailViewModelTest.kt), [`BulkEntryViewModelTest.kt`](app/src/test/java/com/boxvault/app/ui/screens/bulkentry/BulkEntryViewModelTest.kt) — Reactive UI state flows, duplicate short-code guards, off-main-thread draft photo loading, and fast bulk item entry session counters.
+- [`QrScannerViewModelTest.kt`](app/src/test/java/com/boxvault/app/ui/screens/scanner/QrScannerViewModelTest.kt), [`PdfGeneratorViewModelTest.kt`](app/src/test/java/com/boxvault/app/ui/screens/pdfgenerator/PdfGeneratorViewModelTest.kt), [`BackupRestoreViewModelTest.kt`](app/src/test/java/com/boxvault/app/ui/screens/backup/BackupRestoreViewModelTest.kt) — Scanner torch/resolution/manual lookup, PDF preset/selection/export error paths, and SAF backup/restore state transitions.
 - [`QrCodeGeneratorTest.kt`](app/src/test/java/com/boxvault/app/util/qr/QrCodeGeneratorTest.kt) — ZXing QR bitmap generation, quiet-zone pixel verification, `QRCodeReader` round-trip decoding, and `QrScannerViewModel` existing vs. pre-printed blank label routing.
 - [`QrSheetPdfGeneratorTest.kt`](app/src/test/java/com/boxvault/app/util/pdf/QrSheetPdfGeneratorTest.kt) — Multi-page grid math (`2x4`, `3x7`, `4x10`), pre-allocated blank label generation, and valid `%PDF-` stream generation.
 - [`PhotoCompressorTest.kt`](app/src/test/java/com/boxvault/app/util/image/PhotoCompressorTest.kt) — WebP format validation, landscape/portrait `1600px` downsampling, aspect ratio preservation, and EXIF rotation normalization.
-- [`BackupManagerTest.kt`](app/src/test/java/com/boxvault/app/data/backup/BackupManagerTest.kt) — Full export → wipe → atomic staged restore round-trip, Zip-Slip `../../evil.sh` rejection preserving live data, and SHA-256 tamper rejection preserving live data.
+- [`BackupManagerTest.kt`](app/src/test/java/com/boxvault/app/data/backup/BackupManagerTest.kt) — Full streaming export → wipe → atomic staged restore round-trip, Zip-Slip `../../evil.sh` rejection, SHA-256 tamper rejection, and DB-failure rollback preserving live data.
 - [`UserPreferencesManagerTest.kt`](app/src/test/java/com/boxvault/app/data/preferences/UserPreferencesManagerTest.kt) — Local theme preference persistence (`LIGHT`, `DARK`, `SYSTEM`) and sensory feedback mute toggles.
 - [`SensoryFeedbackManagerTest.kt`](app/src/test/java/com/boxvault/app/util/sensory/SensoryFeedbackManagerTest.kt) — Tactile haptic feedback triggers and audio click/chime effects honoring user mute preferences.
 - [`BoxVaultDestinationsTest.kt`](app/src/test/java/com/boxvault/app/ui/navigation/BoxVaultDestinationsTest.kt) — Deep-link URI encoding and query string construction for navigation routes.
+- [`LocalizationCompletenessTest.kt`](app/src/test/java/com/boxvault/app/util/localization/LocalizationCompletenessTest.kt) — String resource completeness and format-specifier parity across all 7 supported locales.
 
 ---
 
@@ -205,9 +209,12 @@ BoxVault uses a shift-left JVM + Robolectric + Room In-Memory test suite (`51` u
 ```text
 BoxVault/
 ├── .github/workflows/
-│   └── android-ci.yml                  # GitHub Actions CI: Build, Unit Tests, Kover Coverage & Zero-Network Audit
+│   └── android-ci.yml                  # GitHub Actions CI: Debug/Release Build, Lint, Unit Tests, Kover Verify & Dual-Variant Zero-Network Audit
+├── docs/
+│   └── CODEBASE_MAP.md                 # Living codebase map (annotated tree, routing table, architecture & sensitive zones)
 ├── app/
 │   ├── build.gradle.kts                # Android App, Room KSP, Compose, CameraX, ML Kit, ZXing, Robolectric & Kover
+│   ├── schemas/                        # Exported Room SQLite schema JSONs (BoxVaultDatabase/2.json)
 │   └── src/
 │       ├── main/
 │       │   ├── AndroidManifest.xml     # Hardened offline manifest (INTERNET & ACCESS_NETWORK_STATE removed)
@@ -215,11 +222,11 @@ BoxVault/
 │       │       ├── BoxVaultApplication.kt
 │       │       ├── MainActivity.kt
 │       │       ├── data/
-│       │       │   ├── backup/         # BackupManager (SAF .ZIP export + atomic staged SHA-256 & Zip-Slip restore)
+│       │       │   ├── backup/         # BackupManager (SAF .ZIP streaming export + atomic staged SHA-256 & Zip-Slip restore)
 │       │       │   ├── local/          # Room Database (Schema v2), RoomEntity, BoxEntity, ItemEntity, PhotoEntity, DAOs
 │       │       │   ├── preferences/    # UserPreferencesManager (ThemeMode, Sound & Haptics SharedPreferences)
 │       │       │   ├── repository/     # BoxVaultRepository
-│       │       │   └── storage/        # PhotoStorageManager (canonical sandboxed file storage)
+│       │       │   └── storage/        # PhotoStorageManager (canonical sandboxed file storage & reversible atomic swap)
 │       │       ├── ui/
 │       │       │   ├── components/     # BoxVaultHeader, PhotoSlotCard, ThemeSelectionDialog, PrivacyPolicyDialog
 │       │       │   ├── navigation/     # BoxVaultDestinations & BoxVaultNavHost (with slide/fade animations)
@@ -230,7 +237,7 @@ BoxVault/
 │       │           ├── pdf/            # QrSheetPdfGenerator (Native PdfDocument A4/Letter crisp QR grids)
 │       │           ├── qr/             # QrCodeGenerator (ZXing high-contrast QR bitmap generator)
 │       │           └── sensory/        # SensoryFeedbackManager (tactile haptics & audio click/chime effects)
-│       └── test/java/com/boxvault/app/ # 13 JUnit + Robolectric shift-left unit test suites (51 tests)
+│       └── test/java/com/boxvault/app/ # 18 JUnit + Robolectric shift-left unit test suites (101 tests)
 └── gradle/libs.versions.toml           # Centralized Gradle version catalog
 ```
 
@@ -239,16 +246,16 @@ BoxVault/
 ## 🚀 Build, Test & Coverage Commands
 
 ### Prerequisites
-- **JDK 21** (e.g., Eclipse Temurin 21)
+- **JDK 21** toolchain (e.g., Eclipse Temurin 21) targeting **JVM 17**
 - **Android SDK Platform 35**
 
-### Run Full Build, Unit Tests & Kover Coverage Report
+### Run Full Build, Lint, Unit Tests & Kover Coverage Verification
 ```bash
 # Linux / macOS
-./gradlew assembleDebug testDebugUnitTest koverXmlReportDebug koverHtmlReportDebug koverLogDebug
+./gradlew assembleDebug assembleRelease lintDebug testDebugUnitTest koverXmlReportDebug koverHtmlReportDebug koverLogDebug koverVerifyDebug
 
 # Windows PowerShell
-.\gradlew.bat assembleDebug testDebugUnitTest koverXmlReportDebug koverHtmlReportDebug koverLogDebug
+.\gradlew.bat assembleDebug assembleRelease lintDebug testDebugUnitTest koverXmlReportDebug koverHtmlReportDebug koverLogDebug koverVerifyDebug
 ```
 
 ### Coverage & Test Report Output Paths
