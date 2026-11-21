@@ -199,19 +199,28 @@ class BoxVaultRepository(
         notes: String = "",
         roomId: String? = null
     ): BoxEntity {
-        val resolvedShortCode = shortCode?.trim()?.takeIf { it.isNotEmpty() }
-            ?: generateNextShortCode()
-        return upsertBox(
-            BoxEntity(
-                shortCode = resolvedShortCode,
-                name = name,
-                location = location,
-                category = category,
-                colorHex = colorHex,
-                notes = notes,
-                roomId = roomId
+        val executeCreate: suspend () -> BoxEntity = {
+            val resolvedShortCode = shortCode?.trim()?.takeIf { it.isNotEmpty() }
+                ?: generateNextShortCode()
+            upsertBox(
+                BoxEntity(
+                    shortCode = resolvedShortCode,
+                    name = name,
+                    location = location,
+                    category = category,
+                    colorHex = colorHex,
+                    notes = notes,
+                    roomId = roomId
+                )
             )
-        )
+        }
+        return if (boxVaultDatabase != null) {
+            boxVaultDatabase.withTransaction {
+                executeCreate()
+            }
+        } else {
+            executeCreate()
+        }
     }
 
     suspend fun upsertBox(box: BoxEntity): BoxEntity {

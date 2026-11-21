@@ -23,7 +23,7 @@ import com.boxvault.app.data.local.entity.RoomEntity
         PhotoEntity::class
     ],
     version = 2,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class BoxVaultDatabase : RoomDatabase() {
 
