@@ -217,7 +217,11 @@ class DashboardViewModelTest {
 
         // Delete room and verify child box becomes unassigned (SET_NULL safety)
         viewModel.deleteRoom(createdRoom.id)
-        val stateAfterDelete = viewModel.uiState.first { it.totalRooms == 0 && it.totalBoxes == 1 }
+        val stateAfterDelete = viewModel.uiState.first {
+            it.totalRooms == 0 &&
+                it.totalBoxes == 1 &&
+                it.filteredBoxes.firstOrNull()?.box?.roomId == null
+        }
         assertFalse(stateAfterDelete.hasRooms)
         assertEquals(1, stateAfterDelete.filteredBoxes.size)
         assertNull(stateAfterDelete.filteredBoxes.first().box.roomId)
