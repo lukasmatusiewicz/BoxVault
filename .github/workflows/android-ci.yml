@@ -10,10 +10,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-test-coverage:
     name: Build, Shift-Left Unit Tests, Offline Audit & Kover Coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - name: Checkout Repository
@@ -33,25 +38,28 @@ jobs:
       - name: Setup Gradle with Cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build Debug APK, Run Unit Tests & Generate Kover Coverage
-        run: ./gradlew assembleDebug testDebugUnitTest koverXmlReportDebug koverHtmlReportDebug koverLogDebug --stacktrace
+      - name: Build Debug & Release APKs, Run Lint, Unit Tests & Verify Kover Coverage
+        run: ./gradlew assembleDebug assembleRelease lintDebug testDebugUnitTest koverXmlReportDebug koverHtmlReportDebug koverLogDebug koverVerifyDebug --stacktrace
 
-      - name: Verify 100% Offline Merged AndroidManifest (Zero Network Permissions)
+      - name: Verify 100% Offline Merged AndroidManifests (Zero Network Permissions)
         run: |
-          MANIFEST_PATH="app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml"
-          if [ ! -f "$MANIFEST_PATH" ]; then
-            echo "::error::Merged AndroidManifest.xml not found at $MANIFEST_PATH"
-            exit 1
-          fi
-          if grep -q "android.permission.INTERNET" "$MANIFEST_PATH"; then
-            echo "::error::SECURITY VIOLATION: android.permission.INTERNET found in merged manifest!"
-            exit 1
-          fi
-          if grep -q "android.permission.ACCESS_NETWORK_STATE" "$MANIFEST_PATH"; then
-            echo "::error::SECURITY VIOLATION: android.permission.ACCESS_NETWORK_STATE found in merged manifest!"
-            exit 1
-          fi
-          echo "✅ Verified: Merged AndroidManifest.xml contains 0 network permissions."
+          for VARIANT_PATH in \
+            "app/build/intermediates/merged_manifests/debug/processDebugManifest/AndroidManifest.xml" \
+            "app/build/intermediates/merged_manifests/release/processReleaseManifest/AndroidManifest.xml"; do
+            if [ ! -f "$VARIANT_PATH" ]; then
+              echo "::error::Merged AndroidManifest.xml not found at $VARIANT_PATH"
+              exit 1
+            fi
+            if grep -q "android.permission.INTERNET" "$VARIANT_PATH"; then
+              echo "::error::SECURITY VIOLATION: android.permission.INTERNET found in $VARIANT_PATH!"
+              exit 1
+            fi
+            if grep -q "android.permission.ACCESS_NETWORK_STATE" "$VARIANT_PATH"; then
+              echo "::error::SECURITY VIOLATION: android.permission.ACCESS_NETWORK_STATE found in $VARIANT_PATH!"
+              exit 1
+            fi
+            echo "✅ Verified: $VARIANT_PATH contains 0 network permissions."
+          done
 
       - name: Publish Test & Kover Coverage Summary
         if: always()
@@ -103,14 +111,16 @@ jobs:
           print("| **Zero-Network Merged Manifest Audit** | ✅ VERIFIED | `0 INTERNET / 0 ACCESS_NETWORK_STATE` |")
           EOF
 
-      - name: Upload Kover Coverage & Unit Test Reports
+      - name: Upload Lint, Kover Coverage & Unit Test Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: boxvault-test-and-kover-reports
+          if-no-files-found: ignore
           path: |
             app/build/reports/tests/testDebugUnitTest/
             app/build/reports/kover/
+            app/build/reports/lint-results-debug.html
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4

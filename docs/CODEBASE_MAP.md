@@ -1,7 +1,7 @@
 # BoxVault Living Codebase Map
 
-> **Last Verified:** 2026-11-20
-> **Branch / HEAD Context:** `docs/codebase-map` (branched from `main` at `d314735`)
+> **Last Verified:** 2026-11-21
+> **Branch / HEAD Context:** `test/viewmodel-coverage-and-ci-hardening` (branched from `main` at `a0ab5cb`)
 > **Scope Note:** Generated, cache, and IDE directories (`.git/`, `.gradle/`, `.idea/`, `build/`, `app/build/`) as well as secret/keystore/credential files (`.env*`, `*.jks`, `*.keystore`, credential JSONs) are intentionally omitted. Every path below was verified against disk.
 
 ---
@@ -11,7 +11,7 @@
 ```text
 BoxVault/
 ├── .github/workflows/
-│   └── android-ci.yml                  # CI: assembleDebug, unit tests, Kover coverage & zero-network manifest audit
+│   └── android-ci.yml                  # CI: assembleDebug/Release, lintDebug, unit tests, Kover verify & dual-variant zero-network audit
 ├── docs/
 │   ├── CODEBASE_MAP.md                 # This living codebase map
 │   ├── assets/
@@ -23,6 +23,7 @@ BoxVault/
 ├── app/
 │   ├── build.gradle.kts                # App module config (minSdk 26, targetSdk 35, Compose, KSP, Room, Kover >=80% rule)
 │   ├── proguard-rules.pro              # R8/ProGuard keep rules for Room, bundled ML Kit Barhopper, and ZXing
+│   ├── schemas/                        # Exported Room SQLite schema JSONs (`BoxVaultDatabase/2.json`)
 │   └── src/
 │       ├── main/
 │       │   ├── AndroidManifest.xml     # Hardened offline manifest (CAMERA only; INTERNET & ACCESS_NETWORK_STATE removed via tools:node="remove")
@@ -74,16 +75,19 @@ BoxVault/
 │       │       ├── values-{de,es,fr,it,pl,uk}/ # Localized strings.xml for 6 additional languages (7 total)
 │       │       └── xml/
 │       │           └── data_extraction_rules.xml # Excludes all domains from cloud-backup and device-transfer
-│       └── test/java/com/boxvault/app/         # 15 JVM/Robolectric/Room unit test suites (no androidTest/ directory)
+│       └── test/java/com/boxvault/app/         # 18 JVM/Robolectric/Room unit test suites (no androidTest/ directory)
 │           ├── data/backup/BackupManagerTest.kt
 │           ├── data/local/dao/{BoxVaultDaoTest.kt,RoomDaoTest.kt}
 │           ├── data/preferences/UserPreferencesManagerTest.kt
 │           ├── data/repository/BoxVaultRepositoryTest.kt
 │           ├── data/storage/PhotoStorageManagerTest.kt
 │           ├── ui/navigation/BoxVaultDestinationsTest.kt
+│           ├── ui/screens/backup/BackupRestoreViewModelTest.kt
 │           ├── ui/screens/boxdetail/BoxEditAndDetailViewModelTest.kt
 │           ├── ui/screens/bulkentry/BulkEntryViewModelTest.kt
 │           ├── ui/screens/dashboard/DashboardViewModelTest.kt
+│           ├── ui/screens/pdfgenerator/PdfGeneratorViewModelTest.kt
+│           ├── ui/screens/scanner/QrScannerViewModelTest.kt
 │           └── util/{image/PhotoCompressorTest.kt,localization/LocalizationCompletenessTest.kt,pdf/QrSheetPdfGeneratorTest.kt,qr/QrCodeGeneratorTest.kt,sensory/SensoryFeedbackManagerTest.kt}
 ├── build.gradle.kts                            # Root Gradle build script
 ├── settings.gradle.kts                         # Project settings & repository config
@@ -117,7 +121,7 @@ BoxVault/
 - **Activity & Theme:** `MainActivity` (`MainActivity.kt`) calls `enableEdgeToEdge()`, observes `userPreferencesManager.themeMode` via `collectAsStateWithLifecycle()`, wraps content in `BoxVaultTheme`, and mounts `BoxVaultNavHost`.
 - **Navigation Graph:** `BoxVaultNavHost` (`ui/navigation/BoxVaultNavHost.kt`) renders the persistent `BoxVaultHeader` (with tap-to-dashboard, theme dialog, and privacy policy dialog) above a `NavHost` starting at `BoxVaultDestinations.DASHBOARD_ROUTE`, connecting `dashboard`, `box_edit`, `box_detail/{boxId}`, `bulk_entry/{boxId}`, `qr_scanner`, `pdf_generator`, and `backup_restore` with `StateFlow`-backed ViewModels instantiated via nested `Factory` classes.
 - **Data Flow:** `Compose Screen` → `ViewModel` (`StateFlow`) → `BoxVaultRepository` → `Room DAOs` (`BoxVaultDatabase`) / `PhotoStorageManager` (`PhotoCompressor` → `filesDir/photos/`) / `BackupManager` (`cacheDir/restore_staging/`).
-- **CI & Test Roots:** `.github/workflows/android-ci.yml` runs `./gradlew assembleDebug testDebugUnitTest koverXmlReportDebug koverHtmlReportDebug koverLogDebug`, audits the merged debug `AndroidManifest.xml` for zero network permissions, and publishes JUnit + Kover summaries. All tests live under `app/src/test/java/com/boxvault/app/` (JVM + Robolectric + Room in-memory).
+- **CI & Test Roots:** `.github/workflows/android-ci.yml` runs `./gradlew assembleDebug assembleRelease lintDebug testDebugUnitTest koverXmlReportDebug koverHtmlReportDebug koverLogDebug koverVerifyDebug`, audits both merged debug and release `AndroidManifest.xml` files for zero network permissions, and publishes JUnit + Kover + Lint reports. All tests live under `app/src/test/java/com/boxvault/app/` (JVM + Robolectric + Room in-memory).
 
 ---
 
