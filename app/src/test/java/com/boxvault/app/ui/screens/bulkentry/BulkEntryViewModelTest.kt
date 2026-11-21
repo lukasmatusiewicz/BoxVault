@@ -133,4 +133,72 @@ class BulkEntryViewModelTest {
         assertEquals(2, stateAfterUndo.totalBoxItemCount)
         assertEquals(4, stateAfterUndo.totalBoxQuantity)
     }
+
+    @Test
+    fun `draft quantity steppers clamp at 1, notes toggle works, and blank category defaults to General`() = runTest(testDispatcher) {
+        val box = repository.createBox(
+            name = "Utility Closet",
+            shortCode = "BOX-002",
+            location = "Hallway"
+        )
+        val viewModel = BulkEntryViewModel(repository, box.id)
+        viewModel.uiState.first { it.box != null }
+
+        assertEquals(1, viewModel.uiState.value.quantityInput)
+        viewModel.decrementDraftQuantity()
+        assertEquals(1, viewModel.uiState.value.quantityInput)
+
+        viewModel.onQuantityChange(-5)
+        assertEquals(1, viewModel.uiState.value.quantityInput)
+
+        viewModel.incrementDraftQuantity()
+        viewModel.incrementDraftQuantity()
+        assertEquals(3, viewModel.uiState.value.quantityInput)
+
+        assertFalse(viewModel.uiState.value.showNotesField)
+        viewModel.toggleNotesField()
+        assertTrue(viewModel.uiState.value.showNotesField)
+        viewModel.onNotesChange("Top shelf")
+        viewModel.onCategoryChange("   ")
+        viewModel.onItemNameChange("Flashlight")
+
+        assertTrue(viewModel.submitCurrentItem())
+        val state = viewModel.uiState.first { it.sessionAddedItems.size == 1 }
+        val inserted = state.sessionAddedItems.first()
+        assertEquals("Flashlight", inserted.name)
+        assertEquals(3, inserted.quantity)
+        assertEquals("General", inserted.category)
+        assertEquals("Top shelf", inserted.notes)
+    }
+
+    @Test
+    fun `bumpSessionItemQuantity ignores unknown id and undoSessionItem removes item from repository`() = runTest(testDispatcher) {
+        val box = repository.createBox(
+            name = "Office Drawer",
+            shortCode = "BOX-003",
+            location = "Office"
+        )
+        val viewModel = BulkEntryViewModel(repository, box.id)
+        viewModel.uiState.first { it.box != null }
+
+        viewModel.onItemNameChange("USB-C Cable")
+        assertTrue(viewModel.submitCurrentItem())
+        val afterAdd = viewModel.uiState.first { it.sessionAddedItems.size == 1 }
+        val itemId = afterAdd.sessionAddedItems.first().id
+
+        // Unknown ID should be a safe no-op
+        viewModel.bumpSessionItemQuantity("non-existent-id")
+        assertEquals(1, viewModel.uiState.value.sessionAddedItems.first().quantity)
+
+        // Valid bump
+        viewModel.bumpSessionItemQuantity(itemId)
+        val afterBump = viewModel.uiState.first { it.sessionAddedItems.first().quantity == 2 }
+        assertEquals(2, afterBump.totalBoxQuantity)
+
+        // Undo deletes from DB too
+        viewModel.undoSessionItem(itemId)
+        val afterUndo = viewModel.uiState.first { it.sessionAddedItems.isEmpty() }
+        assertEquals(0, afterUndo.totalBoxItemCount)
+        assertTrue(repository.getAllItems().isEmpty())
+    }
 }

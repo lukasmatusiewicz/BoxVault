@@ -45,8 +45,6 @@ class DashboardViewModelTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         database = Room.inMemoryDatabaseBuilder(context, BoxVaultDatabase::class.java)
             .allowMainThreadQueries()
-            .setQueryExecutor(Runnable::run)
-            .setTransactionExecutor(Runnable::run)
             .build()
         tempFilesDir = Files.createTempDirectory("boxvault_dashboard_vm_test").toFile()
         photoStorageManager = PhotoStorageManager(
